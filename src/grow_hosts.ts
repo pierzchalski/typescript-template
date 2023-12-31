@@ -12,7 +12,7 @@ export async function main(ns: NS): Promise<void> {
 
   if (hosts.length === 0) {
     tlogf(ns, "No hosts specified.");
-    return;
+    throw new Error("No hosts specified.");
   }
 
   while (true) {

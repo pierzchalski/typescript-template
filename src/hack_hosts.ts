@@ -17,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
 
   while (true) {
     for (const host of hosts) {
-      await ns.weaken(host, { threads });
+      await ns.hack(host, { threads });
     }
   }
 }
