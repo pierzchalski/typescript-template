@@ -17,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
 
   while (true) {
     for (const host of hosts) {
-      await ns.hack(host, { threads });
+      while ((await ns.hack(host, { threads })) === 0) {}
     }
   }
 }

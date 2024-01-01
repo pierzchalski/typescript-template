@@ -1,16 +1,54 @@
 import { NS, Server as NsServer } from "@ns";
 
-export interface Server extends NsServer {}
+export interface Server extends NsServer {
+  path: string[];
+  moneyFraction?: number;
+  remainingSecurity?: number;
+}
+
+export function enhance_server(
+  ns: NS,
+  server: NsServer,
+  path: string[]
+): Server {
+  var moneyFraction: number | undefined;
+  if (
+    server.moneyAvailable !== undefined &&
+    server.moneyMax !== undefined &&
+    server.moneyMax > 0
+  ) {
+    moneyFraction = server.moneyAvailable / server.moneyMax;
+  }
+  var remainingSecurity: number | undefined;
+  if (
+    server.hackDifficulty !== undefined &&
+    server.minDifficulty !== undefined
+  ) {
+    remainingSecurity = server.hackDifficulty - server.minDifficulty;
+  }
+  return { ...server, path, moneyFraction, remainingSecurity };
+}
 
 export function get_hosts(ns: NS, depth: number = 1): Map<string, Server> {
-  const hosts = new Map<string, Server>([[ns.getHostname(), ns.getServer()]]);
+  const starting_server = enhance_server(ns, ns.getServer(), [
+    ns.getHostname(),
+  ]);
+  const paths = get_host_paths(ns, depth);
+  const hosts = new Map<string, Server>([[ns.getHostname(), starting_server]]);
   const scanned = new Set<string>();
   while (depth > 0) {
     for (const host of new Set(hosts.keys())) {
       if (!scanned.has(host)) {
         scanned.add(host);
         for (const link of ns.scan(host)) {
-          hosts.set(link, ns.getServer(link));
+          if (hosts.has(link)) {
+            continue;
+          }
+          const path = paths.get(link);
+          if (path === undefined) {
+            throw new Error(`Path for ${link} is undefined.`);
+          }
+          hosts.set(link, enhance_server(ns, ns.getServer(link), path));
         }
       }
     }
@@ -53,29 +91,27 @@ export function get_host_paths(
  * @param accuracy
  * @returns the fraction of growth from given number of threads.
  */
-export function growth_for_n_threads(
+export async function growth_for_n_threads(
   ns: NS,
   host: string,
-  threads: number = 1,
-  accuracy: number = 1e-5
-): number {
+  threads: number = 1
+): Promise<number> {
   let lo = 1;
-  let hi = 2;
-  while (ns.growthAnalyze(host, hi) <= threads) {
-    hi++;
-  }
-  // `lo` is currently the rate of growth for 0 threads.
-  // `hi` is the smallest integer rate of growth which rquires at least
-  // `threads`.
-  while (lo + accuracy < hi) {
-    const mid = (lo + hi) / 2;
+  let hi = 1000;
+  var mid = 0;
+  for (var iter = 0; iter < 50 && lo < hi; iter += 1) {
+    const new_mid = (lo + hi) / 2;
+    if (Math.abs(mid - new_mid) < 0.0001) {
+      break;
+    }
+    mid = new_mid;
     if (ns.growthAnalyze(host, mid) <= threads) {
       lo = mid;
     } else {
       hi = mid;
     }
   }
-  return (lo + hi) / 2 - 1;
+  return mid;
 }
 
 export function max_script_threads(
@@ -91,12 +127,9 @@ export function max_script_threads(
   }
   const server_ram = ns.getServer(host).maxRam;
   if (server_ram === 0) {
-    const message = `Server ${host} doesn't exist.`;
-    tlogf(ns, "%s", message);
-    throw new Error(message);
+    return 0;
   }
   const threads = Math.floor(server_ram / script_ram);
-  tlogf(ns, "%s@%s can run with %d threads", script, host, threads);
   return threads;
 }
 
@@ -108,30 +141,17 @@ export function logf(ns: NS, fmt: string, ...args: any[]): void {
   ns.printf(`${ns.getScriptName()}@${ns.getHostname()}: ${fmt}`, ...args);
 }
 
-export function analyze_host(ns: NS, host: string): void {
-  ns.tprintf("P(hack):       %v", ns.hackAnalyzeChance(host));
-  ns.tprintf("Hack frac:     %v", ns.hackAnalyze(host));
-  ns.tprintf("Hack seconds:  %v", ns.getHackTime(host) / 1000);
-  ns.tprintf("Hack security (t=1):  %v", ns.hackAnalyzeSecurity(1, host));
-  ns.tprintf("Hack security (t=10): %v", ns.hackAnalyzeSecurity(10, host));
-  ns.tprintf("Grow frac (t=1):  %v", growth_for_n_threads(ns, host, 1));
-  ns.tprintf("Grow frac (t=10): %v", growth_for_n_threads(ns, host, 10));
-  ns.tprintf("Grow seconds:  %v", ns.getGrowTime(host) / 1000);
-  ns.tprintf("Grow security (t=1):  %v", ns.growthAnalyzeSecurity(1, host));
-  ns.tprintf("Grow security (t=10): %v", ns.growthAnalyzeSecurity(10, host));
-  ns.tprintf("Weak seconds:  %v", ns.getWeakenTime(host) / 1000);
-  ns.tprintf("Weak security (t=1):  %v", ns.weakenAnalyze(1));
-  ns.tprintf("Weak security (t=10): %v", ns.weakenAnalyze(10));
-}
-
 export function candidate_runners(
   ns: NS,
   script: string,
   target_thread_count: number,
   servers: Map<string, Server>
 ): Map<string, number> {
-  var run_on = new Map<string, number>();
+  const run_on = new Map<string, number>();
   for (const [host, server] of servers) {
+    if (target_thread_count <= 0) {
+      break;
+    }
     if (!server.hasAdminRights || server.hostname == ns.getHostname()) {
       continue;
     }
@@ -140,19 +160,9 @@ export function candidate_runners(
       run_on.set(host, threads);
     }
     target_thread_count -= threads;
-    if (target_thread_count <= 0) {
-      break;
-    }
   }
+  tlogf(ns, "%s: candidate runners: %j", script, Array(...run_on));
   return run_on;
-}
-
-export function cleanup_runners(ns: NS, runners: Map<string, Server>): void {
-  for (const [host, server] of runners) {
-    if (!server.hasAdminRights || server.hostname == ns.getHostname()) {
-      continue;
-    }
-  }
 }
 
 export function run_on_remotes(
@@ -220,28 +230,25 @@ export function weaken_hosts_run_remote(
   return Array(...run_on.keys());
 }
 
-export function grow_hosts_run_remote(
+export async function grow_hosts_run_remote(
   ns: NS,
   target_thread_count: number,
   runners: Map<string, Server>,
   targets: Map<string, Server>
-): string[] {
+): Promise<string[]> {
   const script = "grow_hosts.js";
   const run_on = candidate_runners(ns, script, target_thread_count, runners);
 
   var target_host_args: (string | number | boolean)[] = [];
   for (const [target_host, server] of targets) {
-    var grow_effect = 1;
-    for (const [_, threads] of run_on) {
-      grow_effect *= 1 + growth_for_n_threads(ns, target_host, threads);
-    }
     if (
       !server.hasAdminRights ||
       server.purchasedByPlayer ||
       ns.getGrowTime(target_host) > 5 * 60 * 1000 /* 5 minutes */ ||
       server.moneyAvailable === undefined ||
       server.moneyMax === undefined ||
-      server.moneyAvailable * grow_effect > server.moneyMax
+      server.moneyMax <= 1 ||
+      server.moneyAvailable >= 0.99 * server.moneyMax
     ) {
       continue;
     }
@@ -273,10 +280,7 @@ export function hack_hosts_run_remote(
 
   var target_host_args: (string | number | boolean)[] = [];
   for (const [target_host, server] of targets) {
-    const hack_effect =
-      total_threads *
-      ns.hackAnalyze(target_host) *
-      ns.hackAnalyzeChance(target_host);
+    const hack_chance = ns.hackAnalyzeChance(target_host);
     if (
       !server.hasAdminRights ||
       server.purchasedByPlayer ||
@@ -284,7 +288,8 @@ export function hack_hosts_run_remote(
       server.moneyAvailable === undefined ||
       server.moneyMax === undefined ||
       server.moneyAvailable <= 1 ||
-      server.moneyAvailable * (1 - hack_effect) <= 0.9 * server.moneyMax
+      hack_chance <= 0.1 ||
+      server.moneyAvailable <= 0.95 * server.moneyMax
     ) {
       continue;
     }

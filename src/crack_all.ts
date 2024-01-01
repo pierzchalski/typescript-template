@@ -17,20 +17,28 @@ export async function main(ns: NS): Promise<void> {
       tlogf(ns, "Need to install backdoor on %s (%j)", host, paths.get(host));
     }
     if (
-      server.hasAdminRights ||
       server.purchasedByPlayer ||
       server.openPortCount === undefined ||
       server.numOpenPortsRequired == undefined
     ) {
       continue;
     }
-    if (!server.ftpPortOpen) {
+    if (!server.ftpPortOpen && ns.fileExists("FTPCrack.exe")) {
       ns.ftpcrack(host);
     }
-    if (!server.sshPortOpen) {
+    if (!server.sshPortOpen && ns.fileExists("BruteSSH.exe")) {
       ns.brutessh(host);
     }
-    if (server.openPortCount >= server.numOpenPortsRequired) {
+    if (!server.httpPortOpen && ns.fileExists("HTTPWorm.exe")) {
+      ns.httpworm(host);
+    }
+    if (!server.smtpPortOpen && ns.fileExists("relaySMTP.exe")) {
+      ns.relaysmtp(host);
+    }
+    if (
+      !server.hasAdminRights &&
+      server.openPortCount >= server.numOpenPortsRequired
+    ) {
       ns.nuke(host);
     }
   }
