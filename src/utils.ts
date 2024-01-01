@@ -357,7 +357,7 @@ export function run_on_remote(
   script: string,
   args: (string | number | boolean)[]
 ): void {
-  ns.scp(["utils.js", "target_hosts.txt", script], host);
+  ns.scp(["utils.js", script], host);
   const threads = max_script_threads(ns, host, script);
   const remote_args = args.concat(["--threads", threads]);
   for (const proc of ns.ps(host)) {
@@ -383,13 +383,22 @@ export function run_targets_on_remotes(
 ): void {
   const json = JSON.stringify(targets);
   ns.write("target_hosts.txt", json, "w");
+
+  ns.write("mode.txt", "weaken", "w");
   for (const host of runners.weaken) {
-    run_on_remote(ns, host, "weaken_hosts.js", []);
+    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    run_on_remote(ns, host, "on_remote.js", []);
   }
+
+  ns.write("mode.txt", "grow", "w");
   for (const host of runners.grow) {
-    run_on_remote(ns, host, "grow_hosts.js", []);
+    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    run_on_remote(ns, host, "on_remote.js", []);
   }
+
+  ns.write("mode.txt", "hack", "w");
   for (const host of runners.hack) {
-    run_on_remote(ns, host, "hack_hosts.js", []);
+    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    run_on_remote(ns, host, "on_remote.js", []);
   }
 }

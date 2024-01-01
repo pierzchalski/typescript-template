@@ -1,5 +1,5 @@
 {
-  "weaken": 1,
-  "grow": 100,
-  "hack": 10
+  "weaken": 100,
+  "grow": 1000,
+  "hack": 1
 }
