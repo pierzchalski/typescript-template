@@ -224,9 +224,12 @@ export function max_script_threads(
     tlogf(ns, "%s", message);
     throw new Error(message);
   }
-  const server_ram = ns.getServer(host).maxRam;
+  var server_ram = ns.getServer(host).maxRam;
   if (server_ram === 0) {
     return 0;
+  }
+  if (host === "home") {
+    server_ram = 0.9 * server_ram;
   }
   const threads = Math.floor(server_ram / script_ram);
   return threads;
@@ -241,11 +244,7 @@ export function logf(ns: NS, fmt: string, ...args: any[]): void {
 }
 
 function valid_runner(ns: NS, server: Server): boolean {
-  return (
-    server.hasAdminRights &&
-    server.hostname !== ns.getHostname() &&
-    server.maxRam > 0
-  );
+  return server.hasAdminRights && server.maxRam > 0;
 }
 
 function valid_weaken_target(ns: NS, server: Server): boolean {
@@ -386,18 +385,20 @@ export function run_on_remote(
   const threads = max_script_threads(ns, host, script);
   const remote_args = args.concat(["--threads", threads]);
   for (const proc of ns.ps(host)) {
-    if (proc.filename === script && array_equals(proc.args, remote_args)) {
-      logf(
-        ns,
-        "%s@%s is already running with args %j",
-        script,
-        host,
-        remote_args
-      );
-      return;
+    if (proc.filename === script) {
+      if (array_equals(proc.args, remote_args)) {
+        logf(
+          ns,
+          "%s@%s is already running with args %j",
+          script,
+          host,
+          remote_args
+        );
+        return;
+      }
+      ns.kill(proc.pid);
     }
   }
-  ns.killall(host);
   ns.exec(script, host, threads, ...remote_args);
 }
 
@@ -409,21 +410,27 @@ export function run_targets_on_remotes(
   const json = JSON.stringify(targets);
   ns.write("target_hosts.txt", json, "w");
 
-  ns.write("mode.txt", "weaken", "w");
+  const mode_file_tmp = "mode_tmp.txt";
+  const mode_file = "mode.txt";
+
   for (const host of runners.weaken) {
-    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    ns.write(mode_file_tmp, "weaken", "w");
+    ns.scp([mode_file_tmp, "target_hosts.txt"], host);
+    ns.mv(host, mode_file_tmp, mode_file);
     run_on_remote(ns, host, "on_remote.js", []);
   }
 
-  ns.write("mode.txt", "grow", "w");
   for (const host of runners.grow) {
-    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    ns.write(mode_file_tmp, "grow", "w");
+    ns.scp([mode_file_tmp, "target_hosts.txt"], host);
+    ns.mv(host, mode_file_tmp, mode_file);
     run_on_remote(ns, host, "on_remote.js", []);
   }
 
-  ns.write("mode.txt", "hack", "w");
   for (const host of runners.hack) {
-    ns.scp(["mode.txt", "target_hosts.txt"], host);
+    ns.write(mode_file_tmp, "hack", "w");
+    ns.scp([mode_file_tmp, "target_hosts.txt"], host);
+    ns.mv(host, mode_file_tmp, mode_file);
     run_on_remote(ns, host, "on_remote.js", []);
   }
 }

@@ -35,6 +35,9 @@ export async function main(ns: NS): Promise<void> {
     if (!server.smtpPortOpen && ns.fileExists("relaySMTP.exe")) {
       ns.relaysmtp(host);
     }
+    if (!server.sqlPortOpen && ns.fileExists("SQLInject.exe")) {
+      ns.sqlinject(host);
+    }
     if (
       !server.hasAdminRights &&
       server.openPortCount >= server.numOpenPortsRequired
