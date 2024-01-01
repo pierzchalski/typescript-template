@@ -1,5 +1,5 @@
 import { NS } from "@ns";
-import { get_hosts } from "./utils";
+import { get_hosts, tlogf } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");

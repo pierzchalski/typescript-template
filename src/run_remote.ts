@@ -1,10 +1,11 @@
 import { NS } from "@ns";
 import {
+  allocate_runners,
+  allocate_targets,
   get_hosts,
-  grow_hosts_run_remote,
-  hack_hosts_run_remote,
+  parse_target_ratios,
+  run_targets_on_remotes,
   tlogf,
-  weaken_hosts_run_remote,
 } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
@@ -17,47 +18,25 @@ export async function main(ns: NS): Promise<void> {
     }
   }
 
-  const flags = ns.flags([
-    ["weaken-threads", 50],
-    ["grow-threads", 50],
-    ["hack-threads", 50],
-    ["sleep-minutes", 30],
-  ]);
-  const target_weaken_threads = flags["weaken-threads"] as number;
-  const target_grow_threads = flags["grow-threads"] as number;
-  const target_hack_threads = flags["hack-threads"] as number;
+  const flags = ns.flags([["sleep-minutes", 5]]);
   const sleep_minutes = flags["sleep-minutes"] as number;
   const args = ns.args;
+  const servers = get_hosts(ns, 10);
 
-  const targets = get_hosts(ns, 10);
-  const runners = new Map(targets);
+  const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
+  const targets = allocate_targets(ns, servers);
+  tlogf(ns, "targets: %j", targets);
 
-  for (const weaken_runner of weaken_hosts_run_remote(
-    ns,
-    target_weaken_threads,
-    runners,
-    targets
-  )) {
-    runners.delete(weaken_runner);
-  }
+  target_ratios.weaken *= targets.weaken.length;
+  target_ratios.grow *= targets.grow.length;
+  target_ratios.hack *= targets.hack.length;
 
-  for (const grow_runner of await grow_hosts_run_remote(
-    ns,
-    target_grow_threads,
-    runners,
-    targets
-  )) {
-    runners.delete(grow_runner);
-  }
+  tlogf(ns, "target_ratios: %j", target_ratios);
 
-  for (const hack_runner of hack_hosts_run_remote(
-    ns,
-    target_hack_threads,
-    runners,
-    targets
-  )) {
-    runners.delete(hack_runner);
-  }
+  const runners = allocate_runners(ns, servers, target_ratios);
+  tlogf(ns, "runners: %j", runners);
+
+  run_targets_on_remotes(ns, runners, targets);
 
   await ns.sleep(sleep_minutes * 60 * 1000);
   ns.spawn(ns.getScriptName(), 1, ...args);

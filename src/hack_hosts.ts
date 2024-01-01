@@ -1,23 +1,20 @@
 import { NS } from "@ns";
-import { tlogf } from "./utils";
+import { parse_target_hosts, shuffle } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
-  const flags = ns.flags([
-    ["threads", 1],
-    ["host", []],
-  ]);
+  const flags = ns.flags([["threads", 1]]);
   const threads = flags.threads as number;
-  const hosts = flags.host as string[];
-
-  if (hosts.length === 0) {
-    tlogf(ns, "No hosts specified.");
-    throw new Error("No hosts specified.");
-  }
 
   while (true) {
-    for (const host of hosts) {
-      while ((await ns.hack(host, { threads })) === 0) {}
+    const targets = parse_target_hosts(ns, "target_hosts.txt").hack;
+    if (targets.length === 0) {
+      await ns.sleep(1000);
+      continue;
+    }
+    shuffle(targets);
+    for (const host of targets) {
+      await ns.hack(host, { threads });
     }
   }
 }

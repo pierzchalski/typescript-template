@@ -29,6 +29,93 @@ export function enhance_server(
   return { ...server, path, moneyFraction, remainingSecurity };
 }
 
+export interface TargetKinds<T> {
+  weaken: T;
+  grow: T;
+  hack: T;
+}
+
+export function default_target_kinds<T>(value: T): TargetKinds<T> {
+  return { weaken: value, grow: value, hack: value };
+}
+
+export function default_target_arrays<T>(): TargetKinds<T[]> {
+  return { weaken: [], grow: [], hack: [] };
+}
+
+export interface TargetNumbers extends TargetKinds<number> {}
+
+function target_ratios_denominator(target_ratios: TargetNumbers): number {
+  return target_ratios.weaken + target_ratios.grow + target_ratios.hack;
+}
+
+export function weaken_frac(target_ratios: TargetNumbers): number {
+  return target_ratios.weaken / target_ratios_denominator(target_ratios);
+}
+
+export function grow_frac(target_ratios: TargetNumbers): number {
+  return target_ratios.grow / target_ratios_denominator(target_ratios);
+}
+
+export function hack_frac(target_ratios: TargetNumbers): number {
+  return target_ratios.hack / target_ratios_denominator(target_ratios);
+}
+
+export function copy_target_kinds<T>(
+  target_kinds: TargetKinds<T>
+): TargetKinds<T> {
+  return {
+    weaken: target_kinds.weaken,
+    grow: target_kinds.grow,
+    hack: target_kinds.hack,
+  };
+}
+
+export interface TargetHosts extends TargetKinds<string[]> {}
+
+export function parse_target_hosts(
+  ns: NS,
+  filename: string = "target_hosts.txt"
+): TargetHosts {
+  const contents = ns.read(filename);
+  const result = JSON.parse(contents);
+  logf(ns, "Parsed %s: %j", filename, result);
+  return result;
+}
+
+export function parse_target_ratios(
+  ns: NS,
+  filename: string = "target_ratios.txt"
+): TargetNumbers {
+  const contents = ns.read(filename);
+  const result = JSON.parse(contents);
+  logf(ns, "Parsed %s: %j", filename, result);
+  return result;
+}
+
+export function shuffle<T>(array: T[]): void {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = array[i];
+    array[i] = array[j];
+    array[j] = t;
+  }
+}
+
+export function shuffled<T>(array: T[]): T[] {
+  const result = array.slice();
+  shuffle(result);
+  return result;
+}
+
+export function take_random<T>(array: T[]): T | undefined {
+  if (array.length === 0) {
+    return undefined;
+  }
+  const index = Math.floor(Math.random() * array.length);
+  return array.splice(index, 1)[0];
+}
+
 export function get_hosts(ns: NS, depth: number = 1): Map<string, Server> {
   const starting_server = enhance_server(ns, ns.getServer(), [
     ns.getHostname(),
@@ -141,166 +228,168 @@ export function logf(ns: NS, fmt: string, ...args: any[]): void {
   ns.printf(`${ns.getScriptName()}@${ns.getHostname()}: ${fmt}`, ...args);
 }
 
-export function candidate_runners(
-  ns: NS,
-  script: string,
-  target_thread_count: number,
-  servers: Map<string, Server>
-): Map<string, number> {
-  const run_on = new Map<string, number>();
-  for (const [host, server] of servers) {
-    if (target_thread_count <= 0) {
-      break;
-    }
-    if (!server.hasAdminRights || server.hostname == ns.getHostname()) {
-      continue;
-    }
-    const threads = max_script_threads(ns, host, script);
-    if (threads > 0) {
-      run_on.set(host, threads);
-    }
-    target_thread_count -= threads;
-  }
-  tlogf(ns, "%s: candidate runners: %j", script, Array(...run_on));
-  return run_on;
+function valid_runner(ns: NS, server: Server): boolean {
+  return (
+    server.hasAdminRights &&
+    server.hostname !== ns.getHostname() &&
+    server.maxRam > 0
+  );
 }
 
-export function run_on_remotes(
+function valid_weaken_target(ns: NS, server: Server): boolean {
+  return (
+    server.hasAdminRights &&
+    !server.purchasedByPlayer &&
+    ns.getWeakenTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    server.minDifficulty !== undefined &&
+    server.hackDifficulty !== undefined &&
+    server.hackDifficulty > server.minDifficulty
+  );
+}
+
+function valid_grow_target(ns: NS, server: Server): boolean {
+  return (
+    server.hasAdminRights &&
+    !server.purchasedByPlayer &&
+    ns.getGrowTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    server.moneyAvailable !== undefined &&
+    server.moneyMax !== undefined &&
+    server.moneyMax > 0 &&
+    server.moneyAvailable < 0.95 * server.moneyMax
+  );
+}
+
+function valid_hack_target(ns: NS, server: Server): boolean {
+  return (
+    server.hasAdminRights &&
+    !server.purchasedByPlayer &&
+    ns.getHackTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    ns.hackAnalyzeChance(server.hostname) > 0.5 &&
+    server.moneyAvailable !== undefined &&
+    server.moneyMax !== undefined &&
+    server.moneyMax > 0 &&
+    server.moneyAvailable > 0.95 * server.moneyMax
+  );
+}
+
+export function allocate_targets(
   ns: NS,
+  servers: Map<string, Server>
+): TargetHosts {
+  const result = default_target_arrays<string>();
+  for (const [host, server] of servers) {
+    if (valid_weaken_target(ns, server)) {
+      result.weaken.push(host);
+    }
+    if (valid_grow_target(ns, server)) {
+      result.grow.push(host);
+    }
+    if (valid_hack_target(ns, server)) {
+      result.hack.push(host);
+    }
+  }
+  return result;
+}
+
+export function allocate_runners(
+  ns: NS,
+  servers: Map<string, Server>,
+  target_ratios: TargetNumbers
+): TargetHosts {
+  const runner_hosts = new Array<string>();
+  var total_memory = 0;
+  for (const [host, server] of servers) {
+    if (valid_runner(ns, server)) {
+      runner_hosts.push(host);
+      total_memory += server.maxRam;
+    }
+  }
+
+  const target_memory_allocatiosn = default_target_kinds(0);
+  target_memory_allocatiosn.weaken = weaken_frac(target_ratios) * total_memory;
+  target_memory_allocatiosn.grow = grow_frac(target_ratios) * total_memory;
+  target_memory_allocatiosn.hack = hack_frac(target_ratios) * total_memory;
+
+  const actual_memory_allocations = default_target_kinds(0);
+  const result = default_target_arrays<string>();
+
+  while (runner_hosts.length > 0) {
+    const host = take_random(runner_hosts) as string;
+    const server = servers.get(host) as Server;
+    const post_allocation_distance = default_target_kinds(0);
+    post_allocation_distance.weaken = Math.abs(
+      Math.log(actual_memory_allocations.weaken + server.maxRam) -
+        Math.log(target_memory_allocatiosn.weaken)
+    );
+    post_allocation_distance.grow = Math.abs(
+      Math.log(actual_memory_allocations.grow + server.maxRam) -
+        Math.log(target_memory_allocatiosn.grow)
+    );
+    post_allocation_distance.hack = Math.abs(
+      Math.log(actual_memory_allocations.hack + server.maxRam) -
+        Math.log(target_memory_allocatiosn.hack)
+    );
+    const min_distance = Math.min(
+      post_allocation_distance.weaken,
+      post_allocation_distance.grow,
+      post_allocation_distance.hack
+    );
+    if (min_distance === post_allocation_distance.weaken) {
+      actual_memory_allocations.weaken += server.maxRam;
+      result.weaken.push(host);
+    } else if (min_distance === post_allocation_distance.grow) {
+      actual_memory_allocations.grow += server.maxRam;
+      result.grow.push(host);
+    } else {
+      actual_memory_allocations.hack += server.maxRam;
+      result.hack.push(host);
+    }
+  }
+  tlogf(ns, "target_memory_allocatiosn: %j", target_memory_allocatiosn);
+  tlogf(ns, "actual_memory_allocations: %j", actual_memory_allocations);
+
+  return result;
+}
+
+export function run_on_remote(
+  ns: NS,
+  host: string,
   script: string,
-  host_to_threads: Map<string, number>,
   args: (string | number | boolean)[]
 ): void {
-  for (const [host, threads] of host_to_threads) {
-    const remote_args = args.concat(["--threads", threads]);
-    ns.scp("utils.js", host);
-    ns.scp(script, host);
-    for (const proc of ns.ps(host)) {
-      if (proc.filename === script && proc.args === remote_args) {
-        tlogf(
-          ns,
-          "%s@%s is already running with args %j",
-          script,
-          host,
-          remote_args
-        );
-        return;
-      }
+  ns.scp(["utils.js", "target_hosts.txt", script], host);
+  const threads = max_script_threads(ns, host, script);
+  const remote_args = args.concat(["--threads", threads]);
+  for (const proc of ns.ps(host)) {
+    if (proc.filename === script && proc.args === remote_args) {
+      tlogf(
+        ns,
+        "%s@%s is already running with args %j",
+        script,
+        host,
+        remote_args
+      );
+      return;
     }
-    ns.killall(host);
-    ns.exec(script, host, threads, ...remote_args);
   }
+  ns.killall(host);
+  ns.exec(script, host, threads, ...remote_args);
 }
 
-export function weaken_hosts_run_remote(
+export function run_targets_on_remotes(
   ns: NS,
-  target_thread_count: number,
-  runners: Map<string, Server>,
-  targets: Map<string, Server>
-): string[] {
-  const script = "weaken_hosts.js";
-  const run_on = candidate_runners(ns, script, target_thread_count, runners);
-
-  var weaken_effect = 0;
-  for (const [_, threads] of run_on) {
-    weaken_effect += ns.weakenAnalyze(threads);
+  runners: TargetHosts,
+  targets: TargetHosts
+): void {
+  const json = JSON.stringify(targets);
+  ns.write("target_hosts.txt", json, "w");
+  for (const host of runners.weaken) {
+    run_on_remote(ns, host, "weaken_hosts.js", []);
   }
-
-  var target_host_args: (string | number | boolean)[] = [];
-  for (const [target_host, server] of targets) {
-    if (
-      !server.hasAdminRights ||
-      server.purchasedByPlayer ||
-      ns.getWeakenTime(target_host) > 5 * 60 * 1000 /* 5 minutes */ ||
-      server.minDifficulty === undefined ||
-      server.hackDifficulty === undefined ||
-      server.hackDifficulty - weaken_effect < server.minDifficulty
-    ) {
-      continue;
-    }
-    target_host_args = target_host_args.concat(["--host", target_host]);
+  for (const host of runners.grow) {
+    run_on_remote(ns, host, "grow_hosts.js", []);
   }
-
-  if (target_host_args.length === 0) {
-    return [];
+  for (const host of runners.hack) {
+    run_on_remote(ns, host, "hack_hosts.js", []);
   }
-
-  run_on_remotes(ns, script, run_on, target_host_args);
-
-  return Array(...run_on.keys());
-}
-
-export async function grow_hosts_run_remote(
-  ns: NS,
-  target_thread_count: number,
-  runners: Map<string, Server>,
-  targets: Map<string, Server>
-): Promise<string[]> {
-  const script = "grow_hosts.js";
-  const run_on = candidate_runners(ns, script, target_thread_count, runners);
-
-  var target_host_args: (string | number | boolean)[] = [];
-  for (const [target_host, server] of targets) {
-    if (
-      !server.hasAdminRights ||
-      server.purchasedByPlayer ||
-      ns.getGrowTime(target_host) > 5 * 60 * 1000 /* 5 minutes */ ||
-      server.moneyAvailable === undefined ||
-      server.moneyMax === undefined ||
-      server.moneyMax <= 1 ||
-      server.moneyAvailable >= 0.99 * server.moneyMax
-    ) {
-      continue;
-    }
-    target_host_args = target_host_args.concat(["--host", target_host]);
-  }
-
-  if (target_host_args.length === 0) {
-    return [];
-  }
-
-  run_on_remotes(ns, script, run_on, target_host_args);
-
-  return Array(...run_on.keys());
-}
-
-export function hack_hosts_run_remote(
-  ns: NS,
-  target_thread_count: number,
-  runners: Map<string, Server>,
-  targets: Map<string, Server>
-): string[] {
-  const script = "hack_hosts.js";
-  const run_on = candidate_runners(ns, script, target_thread_count, runners);
-
-  var total_threads = 0;
-  for (const t of run_on.values()) {
-    total_threads += t;
-  }
-
-  var target_host_args: (string | number | boolean)[] = [];
-  for (const [target_host, server] of targets) {
-    const hack_chance = ns.hackAnalyzeChance(target_host);
-    if (
-      !server.hasAdminRights ||
-      server.purchasedByPlayer ||
-      ns.getHackTime(target_host) > 5 * 60 * 1000 /* 5 minutes */ ||
-      server.moneyAvailable === undefined ||
-      server.moneyMax === undefined ||
-      server.moneyAvailable <= 1 ||
-      hack_chance <= 0.1 ||
-      server.moneyAvailable <= 0.95 * server.moneyMax
-    ) {
-      continue;
-    }
-    target_host_args = target_host_args.concat(["--host", target_host]);
-  }
-
-  if (target_host_args.length === 0) {
-    return [];
-  }
-
-  run_on_remotes(ns, script, run_on, target_host_args);
-
-  return Array(...run_on.keys());
 }
