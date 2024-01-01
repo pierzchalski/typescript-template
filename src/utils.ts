@@ -6,6 +6,18 @@ export interface Server extends NsServer {
   remainingSecurity?: number;
 }
 
+export function array_equals<T>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (var i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function enhance_server(
   ns: NS,
   server: NsServer,
@@ -361,7 +373,7 @@ export function run_on_remote(
   const threads = max_script_threads(ns, host, script);
   const remote_args = args.concat(["--threads", threads]);
   for (const proc of ns.ps(host)) {
-    if (proc.filename === script && proc.args === remote_args) {
+    if (proc.filename === script && array_equals(proc.args, remote_args)) {
       tlogf(
         ns,
         "%s@%s is already running with args %j",

@@ -18,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     }
   }
 
-  const flags = ns.flags([["sleep-minutes", 5]]);
+  const flags = ns.flags([["sleep-minutes", 1]]);
   const sleep_minutes = flags["sleep-minutes"] as number;
   const args = ns.args;
   const servers = get_hosts(ns, 10);
