@@ -267,7 +267,7 @@ function valid_grow_target(ns: NS, server: Server): boolean {
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
     server.moneyMax > 0 &&
-    server.moneyAvailable < 0.95 * server.moneyMax
+    server.moneyAvailable < server.moneyMax
   );
 }
 
@@ -317,30 +317,32 @@ export function allocate_runners(
     }
   }
 
-  const target_memory_allocatiosn = default_target_kinds(0);
-  target_memory_allocatiosn.weaken = weaken_frac(target_ratios) * total_memory;
-  target_memory_allocatiosn.grow = grow_frac(target_ratios) * total_memory;
-  target_memory_allocatiosn.hack = hack_frac(target_ratios) * total_memory;
+  const target_memory_allocations = default_target_kinds(0);
+  target_memory_allocations.weaken = weaken_frac(target_ratios) * total_memory;
+  target_memory_allocations.grow = grow_frac(target_ratios) * total_memory;
+  target_memory_allocations.hack = hack_frac(target_ratios) * total_memory;
 
   const actual_memory_allocations = default_target_kinds(0);
   const result = default_target_arrays<string>();
 
-  while (runner_hosts.length > 0) {
-    const host = take_random(runner_hosts) as string;
+  runner_hosts.sort((a, b) => {
+    const server_a = servers.get(a) as Server;
+    const server_b = servers.get(b) as Server;
+    return server_b.maxRam - server_a.maxRam;
+  });
+
+  for (const host of runner_hosts) {
     const server = servers.get(host) as Server;
     const post_allocation_distance = default_target_kinds(0);
-    post_allocation_distance.weaken = Math.abs(
+    post_allocation_distance.weaken =
       Math.log(actual_memory_allocations.weaken + server.maxRam) -
-        Math.log(target_memory_allocatiosn.weaken)
-    );
-    post_allocation_distance.grow = Math.abs(
+      Math.log(target_memory_allocations.weaken);
+    post_allocation_distance.grow =
       Math.log(actual_memory_allocations.grow + server.maxRam) -
-        Math.log(target_memory_allocatiosn.grow)
-    );
-    post_allocation_distance.hack = Math.abs(
+      Math.log(target_memory_allocations.grow);
+    post_allocation_distance.hack =
       Math.log(actual_memory_allocations.hack + server.maxRam) -
-        Math.log(target_memory_allocatiosn.hack)
-    );
+      Math.log(target_memory_allocations.hack);
     const min_distance = Math.min(
       post_allocation_distance.weaken,
       post_allocation_distance.grow,
@@ -357,8 +359,19 @@ export function allocate_runners(
       result.hack.push(host);
     }
   }
-  tlogf(ns, "target_memory_allocatiosn: %j", target_memory_allocatiosn);
+  const allocation_distance = default_target_kinds(0);
+  allocation_distance.weaken =
+    Math.log(actual_memory_allocations.weaken + 1) -
+    Math.log(target_memory_allocations.weaken + 1);
+  allocation_distance.grow =
+    Math.log(actual_memory_allocations.grow + 1) -
+    Math.log(target_memory_allocations.grow + 1);
+  allocation_distance.hack =
+    Math.log(actual_memory_allocations.hack + 1) -
+    Math.log(target_memory_allocations.hack + 1);
+  tlogf(ns, "target_memory_allocations: %j", target_memory_allocations);
   tlogf(ns, "actual_memory_allocations: %j", actual_memory_allocations);
+  tlogf(ns, "allocation_distance: %j", allocation_distance);
 
   return result;
 }
@@ -374,7 +387,7 @@ export function run_on_remote(
   const remote_args = args.concat(["--threads", threads]);
   for (const proc of ns.ps(host)) {
     if (proc.filename === script && array_equals(proc.args, remote_args)) {
-      tlogf(
+      logf(
         ns,
         "%s@%s is already running with args %j",
         script,

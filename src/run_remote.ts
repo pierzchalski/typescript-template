@@ -27,9 +27,9 @@ export async function main(ns: NS): Promise<void> {
   const targets = allocate_targets(ns, servers);
   tlogf(ns, "targets: %j", targets);
 
-  target_ratios.weaken *= targets.weaken.length;
-  target_ratios.grow *= targets.grow.length;
-  target_ratios.hack *= targets.hack.length;
+  target_ratios.weaken *= targets.weaken.length * targets.weaken.length;
+  target_ratios.grow *= targets.grow.length * targets.grow.length;
+  target_ratios.hack *= targets.hack.length * targets.hack.length;
 
   tlogf(ns, "target_ratios: %j", target_ratios);
 
