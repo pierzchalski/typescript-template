@@ -1,5 +1,5 @@
 import { NS } from "@ns";
-import { parse_target_hosts, shuffle } from "./utils";
+import { parse_target_hosts, pick_random } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
@@ -18,19 +18,18 @@ export async function main(ns: NS): Promise<void> {
       targets = target_hosts.weaken;
     }
 
-    if (targets.length === 0) {
+    const host = pick_random(targets);
+    if (host === undefined) {
       await ns.sleep(1000);
       continue;
     }
-    shuffle(targets);
-    for (const host of targets) {
-      if (mode === "hack") {
-        await ns.hack(host, { threads });
-      } else if (mode === "grow") {
-        await ns.grow(host, { threads });
-      } else {
-        await ns.weaken(host, { threads });
-      }
+
+    if (mode === "hack") {
+      await ns.hack(host, { threads });
+    } else if (mode === "grow") {
+      await ns.grow(host, { threads });
+    } else {
+      await ns.weaken(host, { threads });
     }
   }
 }

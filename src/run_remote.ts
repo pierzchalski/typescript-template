@@ -18,7 +18,7 @@ export async function main(ns: NS): Promise<void> {
     }
   }
 
-  const flags = ns.flags([["sleep-minutes", 1]]);
+  const flags = ns.flags([["sleep-minutes", 0.1]]);
   const sleep_minutes = flags["sleep-minutes"] as number;
   const args = ns.args;
   const servers = get_hosts(ns, 10);
@@ -39,5 +39,7 @@ export async function main(ns: NS): Promise<void> {
   run_targets_on_remotes(ns, runners, targets);
 
   await ns.sleep(sleep_minutes * 60 * 1000);
+  ns.run("crack_all.js");
+  ns.run("auto_get_servers.js");
   ns.spawn(ns.getScriptName(), 1, ...args);
 }

@@ -4,11 +4,11 @@ import { tlogf } from "./utils";
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   const flags = ns.flags([
-    ["host", ""],
+    ["buy-host", ""],
     ["ram-p2", 0],
     ["list", false],
   ]);
-  const host = flags.host as string;
+  const buy_host = flags["buy-host"] as string;
   const list = flags.list as boolean;
   const ram_p2 = flags["ram-p2"] as number;
   const ram = 1 << ram_p2;
@@ -19,17 +19,14 @@ export async function main(ns: NS): Promise<void> {
     return;
   }
 
-  var found = false;
+  if (buy_host !== "") {
+    const result = ns.purchaseServer(buy_host, ram);
+    tlogf(ns, "purchaseServer(%s, %d) = %s", buy_host, ram, result);
+    return;
+  }
+
   for (const server of servers) {
-    if (host !== "" && server !== host) {
-      continue;
-    }
     const result = ns.upgradePurchasedServer(server, ram);
     tlogf(ns, "upgradePurchasedServer(%s, %d) = %t", server, ram, result);
-    found = true;
-  }
-  if (!found) {
-    const result = ns.purchaseServer(host, ram) !== "";
-    tlogf(ns, "purchaseServer(%s, %d) = %t", host, ram, result);
   }
 }

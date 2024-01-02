@@ -4,6 +4,9 @@ export interface Server extends NsServer {
   path: string[];
   moneyFraction?: number;
   remainingSecurity?: number;
+  weakenTimeSeconds: number;
+  growTimeSeconds: number;
+  hackTimeSeconds: number;
 }
 
 export function array_equals<T>(a: T[], b: T[]): boolean {
@@ -20,25 +23,33 @@ export function array_equals<T>(a: T[], b: T[]): boolean {
 
 export function enhance_server(
   ns: NS,
-  server: NsServer,
+  nsServer: NsServer,
   path: string[]
 ): Server {
-  var moneyFraction: number | undefined;
+  const server: Server = {
+    ...nsServer,
+    path,
+    moneyFraction: undefined,
+    remainingSecurity: undefined,
+    weakenTimeSeconds: ns.getWeakenTime(nsServer.hostname) / 1000,
+    growTimeSeconds: ns.getGrowTime(nsServer.hostname) / 1000,
+    hackTimeSeconds: ns.getHackTime(nsServer.hostname) / 1000,
+  };
+
   if (
-    server.moneyAvailable !== undefined &&
-    server.moneyMax !== undefined &&
-    server.moneyMax > 0
+    nsServer.moneyAvailable !== undefined &&
+    nsServer.moneyMax !== undefined &&
+    nsServer.moneyMax > 0
   ) {
-    moneyFraction = server.moneyAvailable / server.moneyMax;
+    server.moneyFraction = nsServer.moneyAvailable / nsServer.moneyMax;
   }
-  var remainingSecurity: number | undefined;
   if (
-    server.hackDifficulty !== undefined &&
-    server.minDifficulty !== undefined
+    nsServer.hackDifficulty !== undefined &&
+    nsServer.minDifficulty !== undefined
   ) {
-    remainingSecurity = server.hackDifficulty - server.minDifficulty;
+    server.remainingSecurity = nsServer.hackDifficulty - nsServer.minDifficulty;
   }
-  return { ...server, path, moneyFraction, remainingSecurity };
+  return server;
 }
 
 export interface TargetKinds<T> {
@@ -91,7 +102,7 @@ export function parse_target_hosts(
 ): TargetHosts {
   const contents = ns.read(filename);
   const result = JSON.parse(contents);
-  logf(ns, "Parsed %s: %j", filename, result);
+  // logf(ns, "Parsed %s: %j", filename, result);
   return result;
 }
 
@@ -118,6 +129,14 @@ export function shuffled<T>(array: T[]): T[] {
   const result = array.slice();
   shuffle(result);
   return result;
+}
+
+export function pick_random<T>(array: T[]): T | undefined {
+  if (array.length === 0) {
+    return undefined;
+  }
+  const index = Math.floor(Math.random() * array.length);
+  return array[index];
 }
 
 export function take_random<T>(array: T[]): T | undefined {
@@ -383,6 +402,10 @@ export function run_on_remote(
 ): void {
   ns.scp(["utils.js", script], host);
   const threads = max_script_threads(ns, host, script);
+  if (threads < 1) {
+    logf(ns, "Not enough RAM to run %s@%s", script, host);
+    return;
+  }
   const remote_args = args.concat(["--threads", threads]);
   for (const proc of ns.ps(host)) {
     if (proc.filename === script) {
@@ -399,6 +422,7 @@ export function run_on_remote(
       ns.kill(proc.pid);
     }
   }
+
   ns.exec(script, host, threads, ...remote_args);
 }
 
