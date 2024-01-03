@@ -248,7 +248,7 @@ export function max_script_threads(
     return 0;
   }
   if (host === "home") {
-    server_ram = 0.9 * server_ram;
+    server_ram = (server_ram * 15) / 16;
   }
   const threads = Math.floor(server_ram / script_ram);
   return threads;

@@ -14,6 +14,12 @@ export async function main(ns: NS): Promise<void> {
     if (target_ram > ns.getPurchasedServerMaxRam()) {
       continue;
     }
+    if (
+      ns.getPurchasedServerUpgradeCost(host, target_ram) >
+      ns.getServerMoneyAvailable("home") / ns.getPurchasedServerLimit()
+    ) {
+      continue;
+    }
     if (ns.upgradePurchasedServer(host, target_ram)) {
       tlogf(ns, "upgradePurchasedServer(%s, %d)", host, target_ram);
     }
