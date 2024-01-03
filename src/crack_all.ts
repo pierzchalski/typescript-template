@@ -1,8 +1,19 @@
 import { NS } from "@ns";
-import { get_host_paths, get_hosts, tlogf } from "./utils";
+import {
+  get_host_paths,
+  get_hosts,
+  kill_any_other_copies,
+  sleep_and_spawn_self,
+  tlogf,
+} from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
+  kill_any_other_copies(ns);
+
+  const flags = ns.flags([["sleep-seconds", 60]]);
+  const sleep_seconds = flags["sleep-seconds"] as number;
+
   const paths = get_host_paths(ns, 10);
   const servers = get_hosts(ns, 10);
   for (const [host, server] of servers) {
@@ -45,4 +56,6 @@ export async function main(ns: NS): Promise<void> {
       ns.nuke(host);
     }
   }
+
+  await sleep_and_spawn_self(ns, sleep_seconds);
 }

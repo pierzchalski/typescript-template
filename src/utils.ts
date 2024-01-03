@@ -31,6 +31,27 @@ export interface StockInfo {
   position: StockPosition;
 }
 
+export interface StockPositionLimits {
+  max_position_value: number;
+  max_order_value: number;
+  min_order_value: number;
+}
+
+export interface StockOrderLimits {
+  max_order_size: number;
+  min_order_size: number;
+}
+
+export function parse_stock_position_limits(
+  ns: NS,
+  filename: string = "stock_position_limits.txt"
+): StockPositionLimits {
+  const contents = ns.read(filename);
+  const result = JSON.parse(contents);
+  logf(ns, "Parsed %s: %j", filename, result);
+  return result;
+}
+
 function get_stock_position(ns: NS, symbol: string): StockPosition {
   const [long, long_avg_price, short, short_avg_price] =
     ns.stock.getPosition(symbol);
@@ -77,6 +98,17 @@ export function kill_any_other_copies(ns: NS): void {
       ns.kill(proc.pid);
     }
   }
+}
+
+export async function sleep_and_spawn_self(
+  ns: NS,
+  sleep_seconds: number
+): Promise<void> {
+  if (sleep_seconds <= 0) {
+    return;
+  }
+  await ns.sleep(sleep_seconds * 1000);
+  ns.spawn(ns.getScriptName(), 1, ...ns.args);
 }
 
 export function array_equals<T>(a: T[], b: T[]): boolean {

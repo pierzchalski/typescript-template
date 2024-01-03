@@ -1,8 +1,12 @@
 import { NS } from "@ns";
-import { tlogf } from "./utils";
+import { kill_any_other_copies, sleep_and_spawn_self, tlogf } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
+  kill_any_other_copies(ns);
+
+  const flags = ns.flags([["sleep-seconds", 60]]);
+  const sleep_seconds = flags["sleep-seconds"] as number;
 
   while (
     ns.getPurchasedServers().length < ns.getPurchasedServerLimit() &&
@@ -24,4 +28,6 @@ export async function main(ns: NS): Promise<void> {
       tlogf(ns, "upgradePurchasedServer(%s, %d)", host, target_ram);
     }
   }
+
+  await sleep_and_spawn_self(ns, sleep_seconds);
 }

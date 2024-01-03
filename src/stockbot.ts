@@ -62,21 +62,21 @@ function trade(ns: NS): void {
       stock.spread_vol < 2 &&
       max_position_value - stock.position.long * stock.ask > min_order_value
     ) {
-      tlogf(ns, "%j", stock);
       const max_position = Math.min(
         stock.position.max_position,
         Math.floor(max_position_value / stock.ask)
       );
       const max_order_size = Math.floor(max_order_value / stock.ask);
       const min_order_size = Math.ceil(min_order_value / stock.ask);
-      const order_size = Math.max(
-        min_order_size,
-        Math.min(
-          max_position - stock.position.long,
-          max_order_size,
-          money_available / stock.ask
-        )
+      const order_size = Math.min(
+        max_position - stock.position.long,
+        max_order_size,
+        money_available / stock.ask
       );
+      if (order_size < min_order_size) {
+        continue;
+      }
+      tlogf(ns, "%j", stock);
       tlogf(
         ns,
         "buyStock(%s, %d) = %v",

@@ -7,6 +7,7 @@ import {
   logf,
   parse_target_ratios,
   run_targets_on_remotes,
+  sleep_and_spawn_self,
   tlogf,
 } from "./utils";
 
@@ -14,9 +15,8 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
-  const flags = ns.flags([["sleep-minutes", 0.1]]);
-  const sleep_minutes = flags["sleep-minutes"] as number;
-  const args = ns.args;
+  const flags = ns.flags([["sleep-seconds", 1]]);
+  const sleep_seconds = flags["sleep-seconds"] as number;
   const servers = get_hosts(ns, 10);
 
   const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
@@ -34,8 +34,5 @@ export async function main(ns: NS): Promise<void> {
 
   run_targets_on_remotes(ns, runners, targets);
 
-  await ns.sleep(sleep_minutes * 60 * 1000);
-  ns.run("crack_all.js");
-  ns.run("auto_get_servers.js");
-  ns.spawn(ns.getScriptName(), 1, ...args);
+  await sleep_and_spawn_self(ns, sleep_seconds);
 }

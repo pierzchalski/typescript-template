@@ -1,0 +1,5 @@
+{
+  "max_position_value": 1e11,
+  "max_order_value": 1e10,
+  "min_order_value": 1e7,
+}
