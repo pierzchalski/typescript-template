@@ -9,6 +9,76 @@ export interface Server extends NsServer {
   hackTimeSeconds: number;
 }
 
+export interface StockPosition {
+  long: number;
+  long_avg_price: number;
+  short: number;
+  short_avg_price: number;
+  total_position: number;
+  max_position: number;
+}
+
+export interface StockInfo {
+  symbol: string;
+  volatility: number;
+  forecast: number;
+  bid: number;
+  ask: number;
+  spread: number;
+  spread_frac: number;
+  spread_vol: number;
+  mid: number;
+  position: StockPosition;
+}
+
+function get_stock_position(ns: NS, symbol: string): StockPosition {
+  const [long, long_avg_price, short, short_avg_price] =
+    ns.stock.getPosition(symbol);
+  return {
+    long,
+    long_avg_price,
+    short,
+    short_avg_price,
+    total_position: long + short,
+    max_position: ns.stock.getMaxShares(symbol),
+  };
+}
+
+export function get_stock_info(ns: NS): StockInfo[] {
+  const result: StockInfo[] = [];
+  for (const symbol of ns.stock.getSymbols()) {
+    const bid = ns.stock.getBidPrice(symbol);
+    const ask = ns.stock.getAskPrice(symbol);
+    const mid = (bid + ask) / 2;
+    const spread = ask - bid;
+    const spread_frac = spread / mid;
+    const volatility = ns.stock.getVolatility(symbol);
+
+    result.push({
+      symbol,
+      volatility,
+      forecast: ns.stock.getForecast(symbol),
+      bid,
+      ask,
+      mid,
+      spread,
+      spread_frac,
+      spread_vol: spread_frac / volatility,
+      position: get_stock_position(ns, symbol),
+    });
+  }
+  return result;
+}
+
+export function kill_any_other_copies(ns: NS): void {
+  for (const proc of ns.ps()) {
+    if (proc.filename === ns.getScriptName() && proc.pid !== ns.pid) {
+      tlogf(ns, "Killing %s %j (pid %d)", proc.filename, proc.args, proc.pid);
+      ns.kill(proc.pid);
+    }
+  }
+}
+
 export function array_equals<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) {
     return false;
@@ -387,9 +457,9 @@ export function allocate_runners(
   allocation_distance.hack =
     Math.log(actual_memory_allocations.hack + 1) -
     Math.log(target_memory_allocations.hack + 1);
-  tlogf(ns, "target_memory_allocations: %j", target_memory_allocations);
-  tlogf(ns, "actual_memory_allocations: %j", actual_memory_allocations);
-  tlogf(ns, "allocation_distance: %j", allocation_distance);
+  logf(ns, "target_memory_allocations: %j", target_memory_allocations);
+  logf(ns, "actual_memory_allocations: %j", actual_memory_allocations);
+  logf(ns, "allocation_distance: %j", allocation_distance);
 
   return result;
 }

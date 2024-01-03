@@ -3,6 +3,8 @@ import {
   allocate_runners,
   allocate_targets,
   get_hosts,
+  kill_any_other_copies,
+  logf,
   parse_target_ratios,
   run_targets_on_remotes,
   tlogf,
@@ -10,13 +12,7 @@ import {
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
-
-  for (const proc of ns.ps()) {
-    if (proc.filename === ns.getScriptName() && proc.pid !== ns.pid) {
-      tlogf(ns, "Killing %s (pid %d)", proc.filename, proc.pid);
-      ns.kill(proc.pid);
-    }
-  }
+  kill_any_other_copies(ns);
 
   const flags = ns.flags([["sleep-minutes", 0.1]]);
   const sleep_minutes = flags["sleep-minutes"] as number;
@@ -25,16 +21,16 @@ export async function main(ns: NS): Promise<void> {
 
   const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
   const targets = allocate_targets(ns, servers);
-  tlogf(ns, "targets: %j", targets);
+  logf(ns, "targets: %j", targets);
 
   target_ratios.weaken *= targets.weaken.length * targets.weaken.length;
   target_ratios.grow *= targets.grow.length * targets.grow.length;
   target_ratios.hack *= targets.hack.length * targets.hack.length;
 
-  tlogf(ns, "target_ratios: %j", target_ratios);
+  logf(ns, "target_ratios: %j", target_ratios);
 
   const runners = allocate_runners(ns, servers, target_ratios);
-  tlogf(ns, "runners: %j", runners);
+  logf(ns, "runners: %j", runners);
 
   run_targets_on_remotes(ns, runners, targets);
 
