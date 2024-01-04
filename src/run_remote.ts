@@ -17,8 +17,8 @@ export async function main(ns: NS): Promise<void> {
 
   const flags = ns.flags([["sleep-seconds", 1]]);
   const sleep_seconds = flags["sleep-seconds"] as number;
-  const servers = get_hosts(ns, 10);
 
+  const servers = get_hosts(ns, 10);
   const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
   const targets = allocate_targets(ns, servers);
   logf(ns, "targets: %j", targets);

@@ -5,7 +5,7 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
-  const flags = ns.flags([["sleep-seconds", 60]]);
+  const flags = ns.flags([["sleep-seconds", 1]]);
   const sleep_seconds = flags["sleep-seconds"] as number;
 
   while (

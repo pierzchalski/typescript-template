@@ -372,7 +372,7 @@ function valid_weaken_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getWeakenTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    ns.getWeakenTime(server.hostname) <= 1 * 60 * 1000 &&
     server.minDifficulty !== undefined &&
     server.hackDifficulty !== undefined &&
     server.hackDifficulty > server.minDifficulty
@@ -383,7 +383,7 @@ function valid_grow_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getGrowTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    ns.getGrowTime(server.hostname) <= 1 * 60 * 1000 &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
     server.moneyMax > 0 &&
@@ -395,7 +395,7 @@ function valid_hack_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getHackTime(server.hostname) <= 5 * 60 * 1000 /* 5 minutes */ &&
+    ns.getHackTime(server.hostname) <= 1 * 60 * 1000 &&
     ns.hackAnalyzeChance(server.hostname) > 0.5 &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
@@ -560,3 +560,126 @@ export function run_targets_on_remotes(
     run_on_remote(ns, host, "on_remote.js", []);
   }
 }
+
+/**
+ *
+ * @param n
+ * @param k
+ * @param cache
+ * @returns number of ways to partition n into k parts
+ */
+function partition(
+  n: number,
+  k: number,
+  cache: Map<[number, number], number>
+): number {
+  {
+    const result = cache.get([n, k]);
+    if (result !== undefined) {
+      return result;
+    }
+  }
+  if (k <= 0) {
+    cache.set([n, k], 0);
+    return 0;
+  }
+  if (k === 1) {
+    cache.set([n, k], 1);
+    return 1;
+  }
+  if (k === n) {
+    cache.set([n, k], 1);
+    return 1;
+  }
+  const result = partition(n - 1, k - 1, cache) + partition(n - k, k, cache);
+  cache.set([n, k], result);
+  return result;
+}
+
+export function total_ways_to_sum(n: number): number {
+  const cache = new Map<[number, number], number>();
+  var result = 0;
+  for (var k = 1; k <= n; k += 1) {
+    result += partition(n, k, cache);
+  }
+  return result - 1;
+}
+
+/*
+f(n, m) = number of ways to sum to n using numbers <= m
+
+f(n, n + k) = f(n, n)
+
+1 : 1
+f(1, 1) = 1
+f(n, 1) = 1
+
+2 : 2
+    1 + 1
+f(2, 2) = 1 + f(1, 1)
+        = 1 + 1
+        = 2
+
+3 : 3
+    2 + 1
+    1 + 1 + 1
+f(3, 3) = 1 + f(1, 2) + f(2, 1)
+        = 1 + 1       + 1
+        = 3
+
+4 : 4
+    3 + 1
+    2 + 2
+    2 + 1 + 1
+    1 + 1 + 1 + 1
+f(4, 4) = 1 + f(1, 3) + f(2, 2) + f(3, 1)
+        = 1 + f(1, 1) + 2       + 1
+        = 1 + 1       + 2       + 1
+        = 5
+
+5 : 5
+    4 + 1
+    3 + 2
+    3 + 1 + 1
+    2 + 2 + 1
+    2 + 1 + 1 + 1
+    1 + 1 + 1 + 1 + 1
+f(5, 5) = 1 + f(1, 4) + f(2, 3) + f(3, 2) + f(4, 1)
+        = 1 + f(1, 1) + f(2, 2) + f(3, 2) + f(4, 1)
+
+6 : 6
+    5 + 1
+    4 + 2
+    4 + 1 + 1
+    3 + 3
+    3 + 2 + 1
+    3 + 1 + 1 + 1
+    2 + 2 + 2
+    2 + 2 + 1 + 1
+    2 + 1 + 1 + 1 + 1
+    1 + 1 + 1 + 1 + 1 + 1
+
+f(6, 6) = 1 + f(1, 5) + f(2, 4) + f(3, 3) + f(4, 2) + f(5, 1)
+
+7 : 7
+    6 + 1
+    5 + 2
+    5 + 1 + 1
+    4 + 3
+    4 + 2 + 1
+    4 + 1 + 1 + 1
+    3 + 3 + 1
+    3 + 2 + 2
+    3 + 2 + 1 + 1
+    3 + 1 + 1 + 1 + 1
+    2 + 2 + 2 + 1
+    2 + 2 + 1 + 1 + 1
+    2 + 1 + 1 + 1 + 1 + 1
+    1 + 1 + 1 + 1 + 1 + 1 + 1
+
+f(7, 7) = 1 + f(1, 6) + f(2, 5) + f(3, 4) + f(4, 3) + f(5, 2) + f(6, 1)
+        = 1 + f(1, 1) + f(2, 2) + f(3, 3) + f(4, 3) + f(5, 2) + f(6, 1)
+
+
+f(17, 12) =
+*/

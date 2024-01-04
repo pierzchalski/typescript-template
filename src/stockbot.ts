@@ -56,7 +56,12 @@ function trade(ns: NS): void {
       );
     }
   }
+
   for (const stock of stock_info) {
+    const money_available = ns.getServerMoneyAvailable("home") - commission;
+    if (min_order_value > money_available) {
+      break;
+    }
     if (
       stock.forecast >= 0.6 &&
       stock.spread_vol < 2 &&
@@ -73,10 +78,16 @@ function trade(ns: NS): void {
         max_order_size,
         money_available / stock.ask
       );
+      tlogf(ns, "%j", stock);
       if (order_size < min_order_size) {
+        tlogf(
+          ns,
+          "order_size < min_order_size (%d < %d)",
+          order_size,
+          min_order_size
+        );
         continue;
       }
-      tlogf(ns, "%j", stock);
       tlogf(
         ns,
         "buyStock(%s, %d) = %v",
@@ -92,7 +103,7 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
-  await ns.stock.nextUpdate();
   trade(ns);
+  await ns.stock.nextUpdate();
   ns.spawn(ns.getScriptName(), 1, ...ns.args);
 }
