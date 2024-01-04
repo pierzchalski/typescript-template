@@ -1,5 +1,10 @@
 import { NS } from "@ns";
-import { kill_any_other_copies, sleep_and_spawn_self, tlogf } from "./utils";
+import {
+  available_funds,
+  kill_any_other_copies,
+  sleep_and_spawn_self,
+  tlogf,
+} from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
@@ -19,8 +24,7 @@ export async function main(ns: NS): Promise<void> {
       continue;
     }
     if (
-      ns.getPurchasedServerUpgradeCost(host, target_ram) >
-      ns.getServerMoneyAvailable("home") / ns.getPurchasedServerLimit()
+      ns.getPurchasedServerUpgradeCost(host, target_ram) > available_funds(ns)
     ) {
       continue;
     }

@@ -1,6 +1,7 @@
 import { NS } from "@ns";
 import {
   StockInfo,
+  available_funds,
   get_stock_info,
   kill_any_other_copies,
   tlogf,
@@ -39,7 +40,6 @@ function trade(ns: NS): void {
   const max_order_value = 1e10;
   const min_order_value = 1e7;
   const commission = 1e5;
-  const money_available = ns.getServerMoneyAvailable("home") - commission;
 
   tlogf(ns, "TICK");
   for (const stock of stock_info) {
@@ -58,7 +58,7 @@ function trade(ns: NS): void {
   }
 
   for (const stock of stock_info) {
-    const money_available = ns.getServerMoneyAvailable("home") - commission;
+    const money_available = available_funds(ns) - commission;
     if (min_order_value > money_available) {
       break;
     }

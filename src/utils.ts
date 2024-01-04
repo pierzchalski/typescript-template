@@ -607,3 +607,7 @@ export function total_ways_to_sum(ns: NS, n: number): number {
   }
   return result - 1;
 }
+
+export function available_funds(ns: NS): number {
+  return Math.max(ns.getServerMoneyAvailable("home") - 1e9, 0);
+}
