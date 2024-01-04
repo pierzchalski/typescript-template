@@ -566,41 +566,44 @@ export function run_targets_on_remotes(
  * @param n
  * @param k
  * @param cache
- * @returns number of ways to partition n into k parts
+ * @returns number of ways to partition n into exactly k parts
  */
 function partition(
+  ns: NS,
   n: number,
   k: number,
-  cache: Map<[number, number], number>
+  cache: Map<string, number>
 ): number {
+  const key = `${n},${k}`;
   {
-    const result = cache.get([n, k]);
+    const result = cache.get(key);
     if (result !== undefined) {
       return result;
     }
   }
   if (k <= 0) {
-    cache.set([n, k], 0);
     return 0;
   }
   if (k === 1) {
-    cache.set([n, k], 1);
     return 1;
   }
   if (k === n) {
-    cache.set([n, k], 1);
     return 1;
   }
-  const result = partition(n - 1, k - 1, cache) + partition(n - k, k, cache);
-  cache.set([n, k], result);
+  if (k > n) {
+    return 0;
+  }
+  const result =
+    partition(ns, n - 1, k - 1, cache) + partition(ns, n - k, k, cache);
+  cache.set(key, result);
   return result;
 }
 
-export function total_ways_to_sum(n: number): number {
-  const cache = new Map<[number, number], number>();
+export function total_ways_to_sum(ns: NS, n: number): number {
+  const cache = new Map<string, number>();
   var result = 0;
   for (var k = 1; k <= n; k += 1) {
-    result += partition(n, k, cache);
+    result += partition(ns, n, k, cache);
   }
   return result - 1;
 }
