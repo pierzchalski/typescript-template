@@ -18,6 +18,8 @@ export async function main(ns: NS): Promise<void> {
       targets = target_hosts.weaken;
     }
 
+    ns.setTitle(`[${mode}] on_remote.js ${ns.args}`);
+
     const host = pick_random(targets);
     if (host === undefined) {
       await ns.sleep(1000);

@@ -372,7 +372,7 @@ function valid_weaken_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getWeakenTime(server.hostname) <= 1 * 60 * 1000 &&
+    ns.getWeakenTime(server.hostname) <= 3 * 60 * 1000 &&
     server.minDifficulty !== undefined &&
     server.hackDifficulty !== undefined &&
     server.hackDifficulty > server.minDifficulty
@@ -383,7 +383,7 @@ function valid_grow_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getGrowTime(server.hostname) <= 1 * 60 * 1000 &&
+    ns.getGrowTime(server.hostname) <= 3 * 60 * 1000 &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
     server.moneyMax > 0 &&
@@ -395,7 +395,7 @@ function valid_hack_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getHackTime(server.hostname) <= 1 * 60 * 1000 &&
+    ns.getHackTime(server.hostname) <= 3 * 60 * 1000 &&
     ns.hackAnalyzeChance(server.hostname) > 0.5 &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
@@ -608,6 +608,33 @@ export function total_ways_to_sum(ns: NS, n: number): number {
   return result - 1;
 }
 
+function valid_graph(coloring: number, edges: [number, number][]): boolean {
+  for (const [a, b] of edges) {
+    if (((coloring >> a) & 1) === ((coloring >> b) & 1)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Proper 2-Coloring of a Graph
+export function two_coloring(
+  ns: NS,
+  graph: [number, [number, number][]]
+): number[] {
+  const [num_nodes, edges] = graph;
+  for (var coloring = 0; coloring < 1 << num_nodes; coloring += 1) {
+    if (valid_graph(coloring, edges)) {
+      const result = new Array<number>();
+      for (var i = 0; i < num_nodes; i += 1) {
+        result.push((coloring >> i) & 1);
+      }
+      return result;
+    }
+  }
+  return [];
+}
+
 export function available_funds(ns: NS): number {
-  return Math.max(ns.getServerMoneyAvailable("home") - 1e9, 0);
+  return Math.max(ns.getServerMoneyAvailable("home") - 1e6, 0);
 }

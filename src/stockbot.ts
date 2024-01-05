@@ -36,8 +36,8 @@ function trade(ns: NS): void {
   const stock_info = get_stock_info(ns);
   stock_info.sort((a, b) => score(b) - score(a));
 
-  const max_position_value = 1e11;
-  const max_order_value = 1e10;
+  const max_position_value = 1e13;
+  const max_order_value = 1e12;
   const min_order_value = 1e7;
   const commission = 1e5;
 
@@ -61,6 +61,9 @@ function trade(ns: NS): void {
     const money_available = available_funds(ns) - commission;
     if (min_order_value > money_available) {
       break;
+    }
+    if (stock.position.long >= stock.position.max_position) {
+      continue;
     }
     if (
       stock.forecast >= 0.6 &&

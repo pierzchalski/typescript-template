@@ -4,6 +4,7 @@ import {
   kill_any_other_copies,
   tlogf,
   total_ways_to_sum,
+  two_coloring,
 } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
@@ -27,12 +28,17 @@ export async function main(ns: NS): Promise<void> {
         "attempts remaining: %d",
         ns.codingcontract.getNumTriesRemaining(file, host)
       );
+      var answer: string | number | any[] = 0;
       if (type === "Total Ways to Sum") {
-        const answer = total_ways_to_sum(ns, data);
-        tlogf(ns, "answer: %d", answer);
-        const result = ns.codingcontract.attempt(answer, file, host);
-        tlogf(ns, "result: %s", result);
+        answer = total_ways_to_sum(ns, data);
+      } else if (type === "Proper 2-Coloring of a Graph") {
+        answer = two_coloring(ns, data);
+      } else {
+        continue;
       }
+      tlogf(ns, "answer: %j", answer);
+      const result = ns.codingcontract.attempt(answer, file, host);
+      tlogf(ns, "result: %s", result);
     }
   }
 }

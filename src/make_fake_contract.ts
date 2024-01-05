@@ -1,5 +1,5 @@
 import { NS } from "@ns";
-import { kill_any_other_copies, tlogf, total_ways_to_sum } from "./utils";
+import { kill_any_other_copies, tlogf, two_coloring } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
@@ -9,12 +9,16 @@ export async function main(ns: NS): Promise<void> {
     ns.rm(f, "home");
   }
 
-  ns.codingcontract.createDummyContract("Total Ways to Sum");
+  ns.codingcontract.createDummyContract("Proper 2-Coloring of a Graph");
 
   for (const f of ns.ls("home", ".cct")) {
-    const data = ns.codingcontract.getData(f, "home") as number;
-    const answer = total_ways_to_sum(ns, data);
+    const data = ns.codingcontract.getData(f, "home") as [
+      number,
+      [number, number][]
+    ];
+    tlogf(ns, "%s: %j", f, data);
+    const answer = two_coloring(ns, data);
     const result = ns.codingcontract.attempt(answer, f, "home");
-    tlogf(ns, "%s: %d -> %d: %s", f, data, answer, result);
+    tlogf(ns, "%s: %j: '%s'", f, answer, result);
   }
 }
