@@ -11,27 +11,6 @@ function score(stock: StockInfo): number {
   return (stock.volatility * (stock.forecast - 0.5)) / 2;
 }
 
-function cost_table(
-  ns: NS,
-  symbol: string,
-  iter: number,
-  stride: number = 1
-): number[] {
-  const costs = [];
-  for (let i = 1; i <= iter; i++) {
-    costs.push(ns.stock.getPurchaseCost(symbol, i * stride, "Long"));
-  }
-  return costs;
-}
-
-function delta_table(input: number[]): number[] {
-  const out = [];
-  for (let i = 0; i < input.length - 1; i++) {
-    out.push(input[i + 1] - input[i]);
-  }
-  return out;
-}
-
 function trade(ns: NS): void {
   const stock_info = get_stock_info(ns);
   stock_info.sort((a, b) => score(b) - score(a));

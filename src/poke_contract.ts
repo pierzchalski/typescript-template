@@ -1,10 +1,13 @@
 import { NS } from "@ns";
 import {
+  clean_nbsp,
   get_hosts,
   kill_any_other_copies,
   tlogf,
   total_ways_to_sum,
-  two_coloring,
+  proper_2_coloring_of_a_graph,
+  encryption_ii_vigenere_cipher,
+  algorithmic_stock_trader_ii,
 } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
@@ -15,12 +18,17 @@ export async function main(ns: NS): Promise<void> {
     for (const file of ns.ls(host, ".cct")) {
       const type = ns.codingcontract.getContractType(file, host);
       const data = ns.codingcontract.getData(file, host);
-      tlogf(ns, "\n%s@%s", file, host);
+      tlogf(
+        ns,
+        "\n########################################################################################################\n%s@%s",
+        file,
+        host
+      );
       tlogf(ns, "type: %s", type);
       tlogf(
         ns,
         "description: %s",
-        ns.codingcontract.getDescription(file, host)
+        clean_nbsp(ns.codingcontract.getDescription(file, host))
       );
       tlogf(ns, "data: %j", data);
       tlogf(
@@ -32,7 +40,11 @@ export async function main(ns: NS): Promise<void> {
       if (type === "Total Ways to Sum") {
         answer = total_ways_to_sum(ns, data);
       } else if (type === "Proper 2-Coloring of a Graph") {
-        answer = two_coloring(ns, data);
+        answer = proper_2_coloring_of_a_graph(ns, data);
+      } else if (type === "Encryption II: Vigenère Cipher") {
+        answer = encryption_ii_vigenere_cipher(ns, data);
+      } else if (type === "Algorithmic Stock Trader II") {
+        answer = algorithmic_stock_trader_ii(ns, data);
       } else {
         continue;
       }

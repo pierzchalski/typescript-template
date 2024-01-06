@@ -281,16 +281,18 @@ export function get_host_paths(
   ns: NS,
   depth: number = 1
 ): Map<string, string[]> {
-  const hosts = new Map<string, string[]>([
-    [ns.getHostname(), [ns.getHostname()]],
-  ]);
+  const hosts = new Map<string, string[]>([[ns.getHostname(), []]]);
   const scanned = new Set<string>();
   while (depth > 0) {
-    for (const [host, path] of new Map(hosts)) {
+    for (var [host, path] of new Map(hosts)) {
       if (scanned.has(host)) {
         continue;
       }
       scanned.add(host);
+      if (ns.getServer(host).backdoorInstalled) {
+        path = [host];
+        hosts.set(host, path);
+      }
       for (const link of ns.scan(host)) {
         if (hosts.has(link)) {
           continue;
@@ -618,7 +620,7 @@ function valid_graph(coloring: number, edges: [number, number][]): boolean {
 }
 
 // Proper 2-Coloring of a Graph
-export function two_coloring(
+export function proper_2_coloring_of_a_graph(
   ns: NS,
   graph: [number, [number, number][]]
 ): number[] {
@@ -635,6 +637,38 @@ export function two_coloring(
   return [];
 }
 
+// Encryption II: Vigenère Cipher
+export function encryption_ii_vigenere_cipher(
+  ns: NS,
+  data: [string, string]
+): string {
+  const [message, key] = data;
+  const result = new Array<string>();
+  for (var i = 0; i < message.length; i += 1) {
+    const key_char = key.charCodeAt(i % key.length) - "A".charCodeAt(0);
+    const message_char = message.charCodeAt(i) - "A".charCodeAt(0);
+    const result_char = (message_char + key_char) % 26;
+    result.push(String.fromCharCode(result_char + "A".charCodeAt(0)));
+  }
+  return result.join("");
+}
+
+// Algorithmic Stock Trader II
+export function algorithmic_stock_trader_ii(ns: NS, prices: number[]): number {
+  var total_profit = 0;
+  // Get sum of increasing subsequences.
+  for (var i = 1; i < prices.length; i += 1) {
+    if (prices[i] > prices[i - 1]) {
+      total_profit += prices[i] - prices[i - 1];
+    }
+  }
+  return total_profit;
+}
+
 export function available_funds(ns: NS): number {
-  return Math.max(ns.getServerMoneyAvailable("home") - 1e6, 0);
+  return Math.max(ns.getServerMoneyAvailable("home") - 1e8, 0);
+}
+
+export function clean_nbsp(s: string): string {
+  return s.replace(/&nbsp;/g, " ");
 }
