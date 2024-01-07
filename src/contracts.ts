@@ -275,3 +275,198 @@ export function encryption_i_caesar_cipher(
   }
   return result;
 }
+
+// Algorithmic Stock Trader III
+export function algorithmic_stock_trader_iii(ns: NS, prices: number[]): number {
+  var max_profit = 0;
+  var iter = 0;
+  // ns.tprintf("prices: %j (len: %d)", prices, prices.length);
+  for (var b0 = 0; b0 < prices.length; b0 += 1) {
+    for (var s0 = b0 + 1; s0 < prices.length; s0 += 1) {
+      const first_trans_profit = prices[s0] - prices[b0];
+      if (first_trans_profit <= 0) {
+        continue;
+      }
+      if (first_trans_profit > max_profit) {
+        // ns.tprintf("[%d, %d], profit: %d", b0, s0, first_trans_profit);
+        max_profit = first_trans_profit;
+      }
+      for (var b1 = s0 + 1; b1 < prices.length; b1 += 1) {
+        for (var s1 = b1 + 1; s1 < prices.length; s1 += 1) {
+          const second_trans_profit = prices[s1] - prices[b1];
+          if (second_trans_profit <= 0) {
+            continue;
+          }
+          iter += 1;
+          if (iter > 100000) {
+            throw new Error("too many iterations");
+          }
+          const profit = first_trans_profit + second_trans_profit;
+          if (profit > max_profit) {
+            // ns.tprintf(
+            //   "[%d, %d], [%d, %d], profit: %d",
+            //   b0,
+            //   s0,
+            //   b1,
+            //   s1,
+            //   profit
+            // );
+            max_profit = profit;
+          }
+        }
+      }
+    }
+  }
+  return max_profit;
+}
+
+// Find Largest Prime Factor
+export function find_largest_prime_factor(ns: NS, n: number): number {
+  var result = 1;
+  for (var i = 2; i <= n; i += 1) {
+    if (n % i === 0) {
+      result = i;
+      while (n % i === 0) {
+        n /= i;
+      }
+    }
+  }
+  return result;
+}
+
+// Unique Paths in a Grid I
+export function unique_paths_in_a_grid_i(
+  ns: NS,
+  grid_size: [number, number]
+): number {
+  const [rows, cols] = grid_size;
+  const dp = new Array<number>(cols).fill(1);
+  for (var row = 1; row < rows; row += 1) {
+    for (var col = 1; col < cols; col += 1) {
+      dp[col] += dp[col - 1];
+    }
+  }
+  return dp[cols - 1];
+}
+
+// HammingCodes: Integer to Encoded Binary
+export function hammingcodes_integer_to_encoded_binary(
+  ns: NS,
+  data: number
+): string {
+  var result = "";
+  return result;
+}
+
+function valid_parens(input: string): boolean {
+  var depth = 0;
+  for (const c of input) {
+    if (c === "(") {
+      depth += 1;
+    } else if (c === ")") {
+      depth -= 1;
+    }
+    if (depth < 0) {
+      return false;
+    }
+  }
+  return depth === 0;
+}
+
+function trim_parens(mask: number, input: string): string {
+  var result = "";
+  var paren_idx = 0;
+  for (const c of input) {
+    if (c !== "(" && c !== ")") {
+      result += c;
+      continue;
+    }
+    if (((mask >> paren_idx) & 1) === 0) {
+      result += c;
+    }
+    paren_idx += 1;
+  }
+  return result;
+}
+
+function count_parens(input: string): number {
+  var result = 0;
+  for (const c of input) {
+    if (c === "(" || c === ")") {
+      result += 1;
+    }
+  }
+  return result;
+}
+
+function mask_pop_count(mask: number): number {
+  var result = 0;
+  while (mask > 0) {
+    result += mask & 1;
+    mask >>= 1;
+  }
+  return result;
+}
+
+function number_as_binary(mask: number, length: number): string {
+  var result = "";
+  for (var i = 0; i < length; i += 1) {
+    result += ((mask >> i) & 1) === 1 ? "1" : "0";
+  }
+  return result;
+}
+
+// Sanitize Parentheses in Expression
+export async function sanitize_parentheses_in_expression(
+  ns: NS,
+  data: string
+): Promise<string[]> {
+  var results: string[] = [];
+  const num_parens = count_parens(data);
+  var min_pop_count = Infinity;
+  for (var mask = 0; mask < 1 << num_parens; mask += 1) {
+    // await ns.sleep(1);
+    const pop_count = mask_pop_count(mask);
+    // ns.tprintf(
+    //   "mask: %s, pop count: %d",
+    //   number_as_binary(mask, num_parens),
+    //   pop_count
+    // );
+    if (pop_count > min_pop_count) {
+      continue;
+    }
+    const trimmed = trim_parens(mask, data);
+    // ns.tprintf("trimmed: %s (valid: %t)", trimmed, valid_parens(trimmed));
+    if (!valid_parens(trimmed)) {
+      continue;
+    }
+    if (pop_count < min_pop_count) {
+      results = [];
+      min_pop_count = pop_count;
+    }
+    if (results.find((s) => s === trimmed) !== undefined) {
+      continue;
+    }
+    results.push(trimmed);
+  }
+  return results;
+}
+
+// Subarray with Maximum Sum
+export function subarray_with_maximum_sum(ns: NS, data: number[]): number {
+  var result = 0;
+  for (var i = 0; i < data.length; i += 1) {
+    var sum = 0;
+    for (var j = i; j < data.length; j += 1) {
+      sum += data[j];
+      result = Math.max(result, sum);
+    }
+  }
+  return result;
+}
+
+// Compression II: LZ Decompression
+export function compression_ii_lz_decompression(ns: NS, data: string): string {
+  var result = "";
+  return result;
+}

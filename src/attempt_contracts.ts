@@ -11,6 +11,11 @@ import {
   generate_ip_addresses,
   encryption_i_caesar_cipher,
   array_jumping_game,
+  algorithmic_stock_trader_iii,
+  find_largest_prime_factor,
+  unique_paths_in_a_grid_i,
+  sanitize_parentheses_in_expression,
+  subarray_with_maximum_sum,
 } from "./contracts";
 
 export async function main(ns: NS): Promise<void> {
@@ -42,18 +47,28 @@ export async function main(ns: NS): Promise<void> {
       var answer: string | number | any[] = 0;
       if (type === "Total Ways to Sum") {
         answer = total_ways_to_sum(ns, data);
+      } else if (type === "Sanitize Parentheses in Expression") {
+        answer = await sanitize_parentheses_in_expression(ns, data);
+      } else if (type === "Subarray with Maximum Sum") {
+        answer = subarray_with_maximum_sum(ns, data);
       } else if (type === "Proper 2-Coloring of a Graph") {
         answer = proper_2_coloring_of_a_graph(ns, data);
+      } else if (type === "Find Largest Prime Factor") {
+        answer = find_largest_prime_factor(ns, data);
       } else if (type === "Encryption I: Caesar Cipher") {
         answer = encryption_i_caesar_cipher(ns, data);
       } else if (type === "Encryption II: Vigenère Cipher") {
         answer = encryption_ii_vigenere_cipher(ns, data);
       } else if (type === "Algorithmic Stock Trader II") {
         answer = algorithmic_stock_trader_ii(ns, data);
+      } else if (type === "Algorithmic Stock Trader III") {
+        answer = algorithmic_stock_trader_iii(ns, data);
       } else if (type === "Array Jumping Game") {
         answer = array_jumping_game(ns, data);
       } else if (type === "Array Jumping Game II") {
         answer = array_jumping_game_ii(ns, data);
+      } else if (type === "Unique Paths in a Grid I") {
+        answer = unique_paths_in_a_grid_i(ns, data);
       } else if (type === "Merge Overlapping Intervals") {
         answer = merge_overlapping_intervals(ns, data);
         // } else if (type === "Total Ways to Sum II") {
@@ -65,6 +80,9 @@ export async function main(ns: NS): Promise<void> {
       }
       tlogf(ns, "answer: %j", answer);
       const result = ns.codingcontract.attempt(answer, file, host);
+      if (result === "") {
+        throw new Error("incorrect answer!");
+      }
       tlogf(ns, "result: %s", result);
     }
   }

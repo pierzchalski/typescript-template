@@ -27,12 +27,18 @@ function trade(ns: NS): void {
       tlogf(ns, "%j", stock);
       const max_order_size = Math.floor(max_order_value / stock.bid);
       const order_size = Math.min(stock.position.long, max_order_size);
+      const sale_price = ns.stock.sellStock(stock.symbol, order_size);
+      if (sale_price === 0) {
+        continue;
+      }
+      const profit = (sale_price - stock.position.long_avg_price) * order_size;
       tlogf(
         ns,
-        "sellStock(%s, %d) = %v",
+        "sellStock(%s, %d) = %v (total profit: %v)",
         stock.symbol,
         order_size,
-        ns.stock.sellStock(stock.symbol, order_size)
+        sale_price,
+        ns.formatNumber(profit)
       );
     }
   }
@@ -46,7 +52,7 @@ function trade(ns: NS): void {
       continue;
     }
     if (
-      stock.forecast >= 0.55 &&
+      stock.forecast >= 0.54 &&
       stock.spread_vol < 2 &&
       max_position_value - stock.position.long * stock.ask > min_order_value
     ) {
