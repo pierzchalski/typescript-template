@@ -1,5 +1,6 @@
 import { NS } from "@ns";
 import { tlogf } from "./utils";
+import { gcd } from "./math";
 
 /**
  *
@@ -103,6 +104,15 @@ export function algorithmic_stock_trader_ii(ns: NS, prices: number[]): number {
   return total_profit;
 }
 
+// Array Jumping Game
+export function array_jumping_game(ns: NS, max_jumps: number[]): number {
+  const result = array_jumping_game_ii(ns, max_jumps);
+  if (result === 0) {
+    return 0;
+  }
+  return 1;
+}
+
 // Array Jumping Game II
 export function array_jumping_game_ii(ns: NS, max_jumps: number[]): number {
   const spots = max_jumps.length;
@@ -134,40 +144,52 @@ function total_ways_to_sum_ii_helper(
   ks: number[],
   cache: Map<string, number>
 ): number {
-  if (ks.length === 0) {
-    return 0;
-  }
   if (n === 0) {
     return 1;
   }
-  const k = ks[ks.length - 1];
+  if (ks.length === 0) {
+    return 0;
+  }
+  const k = ks[0];
+  const next_ks = ks.slice(1);
+  if (n < k) {
+    return total_ways_to_sum_ii_helper(ns, n, next_ks, cache);
+  }
   if (ks.length === 1) {
     if (n % k === 0) {
       return 1;
     }
     return 0;
   }
+  if (n % gcd(...ks) !== 0) {
+    return 0;
+  }
+  if (ks.length === 2 && ks[1] === 1) {
+    if (n % k === 0) {
+      return n / k + 1;
+    }
+    return n / k;
+  }
+  const key = total_ways_to_sum_ii_key(n, ks);
+  {
+    const result = cache.get(key);
+    if (result !== undefined) {
+      return result;
+    }
+  }
   call_count += 1;
   if (call_count > 1000) {
     throw new Error("too many calls");
   }
-  const next_ks = ks.slice(0, -1);
   var result = 0;
-  var next_n = n;
-  while (next_n >= 0) {
+  var next_n = n % k;
+  while (next_n <= n) {
     const sub_result = total_ways_to_sum_ii_helper(ns, next_n, next_ks, cache);
-    // tlogf(
-    //   ns,
-    //   "next_n: %d, next_ks: %j, sub_result: %d",
-    //   next_n,
-    //   next_ks,
-    //   sub_result
-    // );
-
     result += sub_result;
-    next_n -= k;
+    next_n += k;
   }
   tlogf(ns, "n: %d, ks: %j, result: %d", n, ks, result);
+  cache.set(key, result);
   return result;
 }
 
@@ -176,5 +198,80 @@ export function total_ways_to_sum_ii(ns: NS, data: [number, number[]]): number {
   call_count = 0;
   const [n, ks] = data;
   const cache = new Map<string, number>();
+  ks.reverse();
   return total_ways_to_sum_ii_helper(ns, n, ks, cache);
+}
+
+// Merge Overlapping Intervals
+export function merge_overlapping_intervals(
+  ns: NS,
+  data: [number, number][]
+): [number, number][] {
+  data.sort(([a, _], [b, __]) => a - b);
+  const result = new Array<[number, number]>();
+  for (const [start, end] of data) {
+    if (result.length === 0) {
+      result.push([start, end]);
+    } else {
+      const [last_start, last_end] = result[result.length - 1];
+      if (start <= last_end) {
+        result[result.length - 1] = [last_start, Math.max(last_end, end)];
+      } else {
+        result.push([start, end]);
+      }
+    }
+  }
+  return result;
+}
+
+// Generate IP Addresses
+export function generate_ip_addresses(ns: NS, data: string): string[] {
+  const result = new Array<string>();
+  for (var a = 1; a < 4; a += 1) {
+    for (var b = 1; b < 4; b += 1) {
+      for (var c = 1; c < 4; c += 1) {
+        for (var d = 1; d < 4; d += 1) {
+          if (a + b + c + d !== data.length) {
+            continue;
+          }
+          const ip = `${data.slice(0, a)}.${data.slice(a, a + b)}.${data.slice(
+            a + b,
+            a + b + c
+          )}.${data.slice(a + b + c)}`;
+          if (
+            ip
+              .split(".")
+              .every(
+                (n) =>
+                  parseInt(n) < 256 &&
+                  n.length === parseInt(n).toString().length
+              )
+          ) {
+            result.push(ip);
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+
+// Encryption I: Caesar Cipher
+export function encryption_i_caesar_cipher(
+  ns: NS,
+  data: [string, number]
+): string {
+  const [message, shift] = data;
+  ns.printf("message: %s\n", message);
+  var result = "";
+  for (var i = 0; i < message.length; i += 1) {
+    if (message[i] === " ") {
+      result += " ";
+      continue;
+    }
+    const message_char = message.charCodeAt(i) - "A".charCodeAt(0);
+    const result_char = (message_char + 26 - shift) % 26;
+    result += String.fromCharCode(result_char + "A".charCodeAt(0));
+  }
+  return result;
 }

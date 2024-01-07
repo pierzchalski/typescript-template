@@ -6,6 +6,11 @@ import {
   encryption_ii_vigenere_cipher,
   algorithmic_stock_trader_ii,
   array_jumping_game_ii,
+  total_ways_to_sum_ii,
+  merge_overlapping_intervals,
+  generate_ip_addresses,
+  encryption_i_caesar_cipher,
+  array_jumping_game,
 } from "./contracts";
 
 export async function main(ns: NS): Promise<void> {
@@ -39,12 +44,22 @@ export async function main(ns: NS): Promise<void> {
         answer = total_ways_to_sum(ns, data);
       } else if (type === "Proper 2-Coloring of a Graph") {
         answer = proper_2_coloring_of_a_graph(ns, data);
+      } else if (type === "Encryption I: Caesar Cipher") {
+        answer = encryption_i_caesar_cipher(ns, data);
       } else if (type === "Encryption II: Vigenère Cipher") {
         answer = encryption_ii_vigenere_cipher(ns, data);
       } else if (type === "Algorithmic Stock Trader II") {
         answer = algorithmic_stock_trader_ii(ns, data);
+      } else if (type === "Array Jumping Game") {
+        answer = array_jumping_game(ns, data);
       } else if (type === "Array Jumping Game II") {
         answer = array_jumping_game_ii(ns, data);
+      } else if (type === "Merge Overlapping Intervals") {
+        answer = merge_overlapping_intervals(ns, data);
+        // } else if (type === "Total Ways to Sum II") {
+        //   answer = total_ways_to_sum_ii(ns, data);
+      } else if (type === "Generate IP Addresses") {
+        answer = generate_ip_addresses(ns, data);
       } else {
         continue;
       }

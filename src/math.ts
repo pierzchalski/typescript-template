@@ -1,10 +1,15 @@
-export function gcd(a: number, b: number, ...rest: number[]): number {
-  if (rest.length === 0) {
-    if (b === 0) {
-      return a;
-    }
-    return gcd(b, a % b);
+export function gcd(...ns: number[]): number {
+  if (ns.length === 0) {
+    throw new Error("gcd: no arguments");
   }
-  const c = rest.shift() as number;
-  return gcd(gcd(a, b), c, ...rest);
+  const a = ns.shift() as number;
+  if (ns.length === 0) {
+    return a;
+  }
+  const b = ns.shift() as number;
+  if (b === 0) {
+    return gcd(a, ...ns);
+  } else {
+    return gcd(b, a % b, ...ns);
+  }
 }

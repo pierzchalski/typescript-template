@@ -4,6 +4,7 @@ import {
   available_funds,
   get_stock_info,
   kill_any_other_copies,
+  logf,
   tlogf,
 } from "./utils";
 
@@ -20,7 +21,7 @@ function trade(ns: NS): void {
   const min_order_value = 1e7;
   const commission = 1e5;
 
-  tlogf(ns, "TICK");
+  logf(ns, "TICK");
   for (const stock of stock_info) {
     if (stock.forecast < 0.5 && stock.position.long > 0) {
       tlogf(ns, "%j", stock);
@@ -60,7 +61,7 @@ function trade(ns: NS): void {
         max_order_size,
         money_available / stock.ask
       );
-      tlogf(ns, "%j", stock);
+      logf(ns, "%j", stock);
       if (order_size < min_order_size) {
         tlogf(
           ns,
@@ -70,7 +71,7 @@ function trade(ns: NS): void {
         );
         continue;
       }
-      tlogf(
+      logf(
         ns,
         "buyStock(%s, %d) = %v",
         stock.symbol,
