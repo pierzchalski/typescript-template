@@ -1,14 +1,12 @@
 import { NS } from "@ns";
+import { clean_nbsp, get_hosts, kill_any_other_copies, tlogf } from "./utils";
 import {
-  clean_nbsp,
-  get_hosts,
-  kill_any_other_copies,
-  tlogf,
   total_ways_to_sum,
   proper_2_coloring_of_a_graph,
   encryption_ii_vigenere_cipher,
   algorithmic_stock_trader_ii,
-} from "./utils";
+  array_jumping_game_ii,
+} from "./contracts";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
@@ -45,6 +43,8 @@ export async function main(ns: NS): Promise<void> {
         answer = encryption_ii_vigenere_cipher(ns, data);
       } else if (type === "Algorithmic Stock Trader II") {
         answer = algorithmic_stock_trader_ii(ns, data);
+      } else if (type === "Array Jumping Game II") {
+        answer = array_jumping_game_ii(ns, data);
       } else {
         continue;
       }

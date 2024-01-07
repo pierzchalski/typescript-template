@@ -8,14 +8,14 @@ import {
 } from "./utils";
 
 function score(stock: StockInfo): number {
-  return (stock.volatility * (stock.forecast - 0.5)) / 2;
+  return (stock.volatility * (stock.forecast - 0.5)) / stock.spread_vol;
 }
 
 function trade(ns: NS): void {
   const stock_info = get_stock_info(ns);
   stock_info.sort((a, b) => score(b) - score(a));
 
-  const max_position_value = 1e13;
+  const max_position_value = 1e20;
   const max_order_value = 1e12;
   const min_order_value = 1e7;
   const commission = 1e5;
@@ -45,7 +45,7 @@ function trade(ns: NS): void {
       continue;
     }
     if (
-      stock.forecast >= 0.6 &&
+      stock.forecast >= 0.55 &&
       stock.spread_vol < 2 &&
       max_position_value - stock.position.long * stock.ask > min_order_value
     ) {

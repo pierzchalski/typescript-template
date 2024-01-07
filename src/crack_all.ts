@@ -11,7 +11,7 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
-  const flags = ns.flags([["sleep-seconds", 10]]);
+  const flags = ns.flags([["sleep-seconds", 60]]);
   const sleep_seconds = flags["sleep-seconds"] as number;
 
   const paths = get_host_paths(ns, 10);
