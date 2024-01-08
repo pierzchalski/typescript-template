@@ -9,7 +9,7 @@ import {
 } from "./utils";
 
 function score(stock: StockInfo): number {
-  return (stock.volatility * (stock.forecast - 0.5)) / stock.spread_vol;
+  return stock.average_change / stock.expected_spread_duraton;
 }
 
 function trade(ns: NS): void {
@@ -24,13 +24,13 @@ function trade(ns: NS): void {
   logf(ns, "TICK");
   for (const stock of stock_info) {
     if (stock.forecast < 0.5 && stock.position.long > 0) {
-      tlogf(ns, "%j", stock);
       const max_order_size = Math.floor(max_order_value / stock.bid);
       const order_size = Math.min(stock.position.long, max_order_size);
       const sale_price = ns.stock.sellStock(stock.symbol, order_size);
       if (sale_price === 0) {
         continue;
       }
+      tlogf(ns, "%j", stock);
       const profit = (sale_price - stock.position.long_avg_price) * order_size;
       tlogf(
         ns,
@@ -52,8 +52,7 @@ function trade(ns: NS): void {
       continue;
     }
     if (
-      stock.forecast >= 0.54 &&
-      stock.spread_vol < 2 &&
+      stock.forecast >= 0.53 &&
       max_position_value - stock.position.long * stock.ask > min_order_value
     ) {
       const max_position = Math.min(
@@ -62,11 +61,15 @@ function trade(ns: NS): void {
       );
       const max_order_size = Math.floor(max_order_value / stock.ask);
       const min_order_size = Math.ceil(min_order_value / stock.ask);
+      if (min_order_size > stock.position.max_position - stock.position.long) {
+        continue;
+      }
       const order_size = Math.min(
         max_position - stock.position.long,
         max_order_size,
         money_available / stock.ask
       );
+
       logf(ns, "%j", stock);
       if (order_size < min_order_size) {
         tlogf(

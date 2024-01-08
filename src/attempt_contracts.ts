@@ -16,15 +16,26 @@ import {
   unique_paths_in_a_grid_i,
   sanitize_parentheses_in_expression,
   subarray_with_maximum_sum,
+  compression_ii_lz_decompression,
+  find_all_valid_math_expressions,
 } from "./contracts";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
+  const contract_type_counts = new Map<string, number>();
   for (const [host, _] of get_hosts(ns, 10)) {
     for (const file of ns.ls(host, ".cct")) {
       const type = ns.codingcontract.getContractType(file, host);
+      if (contract_type_counts.has(type)) {
+        contract_type_counts.set(
+          type,
+          (contract_type_counts.get(type) as number) + 1
+        );
+      } else {
+        contract_type_counts.set(type, 1);
+      }
       const data = ns.codingcontract.getData(file, host);
       tlogf(
         ns,
@@ -63,6 +74,8 @@ export async function main(ns: NS): Promise<void> {
         answer = algorithmic_stock_trader_ii(ns, data);
       } else if (type === "Algorithmic Stock Trader III") {
         answer = algorithmic_stock_trader_iii(ns, data);
+      } else if (type === "Compression II: LZ Decompression") {
+        answer = compression_ii_lz_decompression(ns, data);
       } else if (type === "Array Jumping Game") {
         answer = array_jumping_game(ns, data);
       } else if (type === "Array Jumping Game II") {
@@ -71,8 +84,8 @@ export async function main(ns: NS): Promise<void> {
         answer = unique_paths_in_a_grid_i(ns, data);
       } else if (type === "Merge Overlapping Intervals") {
         answer = merge_overlapping_intervals(ns, data);
-        // } else if (type === "Total Ways to Sum II") {
-        //   answer = total_ways_to_sum_ii(ns, data);
+      } else if (type === "Find All Valid Math Expressions") {
+        answer = await find_all_valid_math_expressions(ns, data);
       } else if (type === "Generate IP Addresses") {
         answer = generate_ip_addresses(ns, data);
       } else {
@@ -86,4 +99,7 @@ export async function main(ns: NS): Promise<void> {
       tlogf(ns, "result: %s", result);
     }
   }
+  const counts = Array.from(contract_type_counts.entries());
+  counts.sort((a, b) => b[1] - a[1]);
+  tlogf(ns, "counts: %j", counts);
 }

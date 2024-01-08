@@ -465,8 +465,204 @@ export function subarray_with_maximum_sum(ns: NS, data: number[]): number {
   return result;
 }
 
+function decompress_chunk_type_1(
+  ns: NS,
+  compressed: [string],
+  decompressed: [string]
+): void {
+  const input = compressed[0];
+  if (input.length === 0) {
+    return;
+  }
+  const length = parseInt(input[0]);
+  if (length === 0) {
+    compressed[0] = input.slice(1);
+    return;
+  }
+  decompressed[0] += input.slice(1, 1 + length);
+  compressed[0] = input.slice(1 + length);
+}
+
+function decompress_chunk_type_2(
+  ns: NS,
+  compressed: [string],
+  decompressed: [string]
+): void {
+  const input = compressed[0];
+  if (input.length === 0) {
+    return;
+  }
+  const length = parseInt(input[0]);
+  if (length === 0) {
+    compressed[0] = input.slice(1);
+    return;
+  }
+  const offset = parseInt(input[1]);
+  for (var i = 0; i < length; i += 1) {
+    const output = decompressed[0];
+    decompressed[0] += output[output.length - offset];
+  }
+  compressed[0] = input.slice(2);
+}
+
 // Compression II: LZ Decompression
 export function compression_ii_lz_decompression(ns: NS, data: string): string {
-  var result = "";
+  const compressed: [string] = [data];
+  const decompressed: [string] = [""];
+
+  while (compressed[0].length > 0) {
+    // ns.tprintf(
+    //   "pre chunk type 1:\n\tcompressed:\t%s\n\tdecompressed:\t%s",
+    //   compressed[0],
+    //   decompressed[0]
+    // );
+    decompress_chunk_type_1(ns, compressed, decompressed);
+    // ns.tprintf(
+    //   "post chunk type 1, pre chunk type 2:\n\tcompressed:\t%s\n\tdecompressed:\t%s",
+    //   compressed[0],
+    //   decompressed[0]
+    // );
+    decompress_chunk_type_2(ns, compressed, decompressed);
+    // ns.tprintf(
+    //   "post chunk type 2:\n\tcompressed:\t%s\n\tdecompressed:\t%s",
+    //   compressed[0],
+    //   decompressed[0]
+    // );
+  }
+  return decompressed[0];
+}
+
+interface CompressionState {
+  input: string;
+  // The index of the first uncompressed byte in `input` (so we're done when `input_idx === input.length`)
+  input_idx: number;
+  output: string;
+}
+
+async function compression_iii_helper(
+  ns: NS,
+  state: CompressionState
+): Promise<string> {
+  await ns.sleep(1);
+}
+
+// Compression III: LZ Compression
+export async function compression_iii_lz_compression(
+  ns: NS,
+  data: string
+): Promise<string> {
+  ns.tprintf("data: %s", data);
+  const state: CompressionState = {
+    input: data,
+    input_idx: 0,
+    output: "",
+  };
+  return await compression_iii_helper(ns, state);
+}
+
+function mask_to_ops(mask: number, length: number): number[] {
+  const result: number[] = [];
+  for (var i = 0; i < length; i += 1) {
+    result.push((mask >> (2 * i)) & 0b11);
+  }
+  return result;
+}
+
+function render_digits_and_ops(digits: number[], ops: number[]): string {
+  var result = `${digits[0]}`;
+  for (var i = 0; i < ops.length; i += 1) {
+    if (ops[i] === 0) {
+      result += `${digits[i + 1]}`;
+    } else if (ops[i] === 1) {
+      result += `*${digits[i + 1]}`;
+    } else if (ops[i] === 2) {
+      result += `+${digits[i + 1]}`;
+    } else if (ops[i] === 3) {
+      result += `-${digits[i + 1]}`;
+    }
+  }
+  return result;
+}
+
+function digits_to_digits(n: string): number[] {
+  const result: number[] = [];
+  for (const c of n) {
+    result.push(parseInt(c));
+  }
+  return result;
+}
+
+function max_ops_mask(digits: string): number {
+  return (1 << (2 * (digits.length - 1))) - 1;
+}
+
+function reduce_expression(
+  digits: number[],
+  ops: number[]
+): number | undefined {
+  const post_concat_ops: number[] = [];
+  const post_concat_numbers: number[] = [digits[0]];
+  // `ops[i]` acts on `digits[i]` and `digits[i + 1]`
+  for (var i = 0; i < ops.length; i += 1) {
+    if (ops[i] !== 0) {
+      post_concat_ops.push(ops[i]);
+      post_concat_numbers.push(digits[i + 1]);
+      continue;
+    }
+    const last_number = post_concat_numbers.pop() as number;
+    if (last_number === 0) {
+      // Can't concat 0 with something else
+      return undefined;
+    }
+    post_concat_numbers.push(last_number * 10 + digits[i + 1]);
+  }
+
+  const post_mul_ops: number[] = [];
+  const post_mul_numbers: number[] = [post_concat_numbers[0]];
+
+  for (var i = 0; i < post_concat_ops.length; i += 1) {
+    if (post_concat_ops[i] !== 1) {
+      post_mul_ops.push(post_concat_ops[i]);
+      post_mul_numbers.push(post_concat_numbers[i + 1]);
+      continue;
+    }
+    const last_number = post_mul_numbers.pop() as number;
+    post_mul_numbers.push(last_number * post_concat_numbers[i + 1]);
+  }
+
+  var result = post_mul_numbers[0];
+  for (var i = 0; i < post_mul_ops.length; i += 1) {
+    if (post_mul_ops[i] === 2) {
+      result += post_mul_numbers[i + 1];
+    } else if (post_mul_ops[i] === 3) {
+      result -= post_mul_numbers[i + 1];
+    }
+  }
+
+  return result;
+}
+
+// Find All Valid Math Expressions
+export async function find_all_valid_math_expressions(
+  ns: NS,
+  data: [string, number]
+): Promise<string[]> {
+  const [digits_string, target] = data;
+  // ns.tprintf("digits: %j, target: %d", digits_string, target);
+  var result: string[] = [];
+  const max_mask = max_ops_mask(digits_string);
+  const digits = digits_to_digits(digits_string);
+  for (var mask = 0; mask <= max_mask; mask += 1) {
+    if (mask % 10000 === 0) {
+      await ns.sleep(1);
+    }
+    const ops = mask_to_ops(mask, digits_string.length - 1);
+    const value = reduce_expression(digits, ops);
+    if (value === target) {
+      const expr = render_digits_and_ops(digits, ops);
+      // ns.tprintf("mask: %x, expr: %s", mask, expr);
+      result.push(expr);
+    }
+  }
   return result;
 }

@@ -20,13 +20,15 @@ export interface StockPosition {
 
 export interface StockInfo {
   symbol: string;
+  score: number;
   volatility: number;
   forecast: number;
+  average_change: number;
   bid: number;
   ask: number;
   spread: number;
   spread_frac: number;
-  spread_vol: number;
+  expected_spread_duraton: number;
   mid: number;
   position: StockPosition;
 }
@@ -73,18 +75,25 @@ export function get_stock_info(ns: NS): StockInfo[] {
     const mid = (bid + ask) / 2;
     const spread = ask - bid;
     const spread_frac = spread / mid;
+    const forecast = ns.stock.getForecast(symbol);
     const volatility = ns.stock.getVolatility(symbol);
+    const average_change = volatility * (forecast - 0.5);
+    const expected_spread_duraton = Math.abs(spread_frac / average_change);
+
+    const score = average_change / expected_spread_duraton;
 
     result.push({
       symbol,
       volatility,
-      forecast: ns.stock.getForecast(symbol),
+      forecast,
+      average_change,
       bid,
       ask,
       mid,
       spread,
       spread_frac,
-      spread_vol: spread_frac / volatility,
+      expected_spread_duraton,
+      score,
       position: get_stock_position(ns, symbol),
     });
   }
@@ -370,11 +379,19 @@ function valid_runner(ns: NS, server: Server): boolean {
   return server.hasAdminRights && server.maxRam > 0;
 }
 
+function not_too_slow(server: Server): boolean {
+  return (
+    server.weakenTimeSeconds <= 10 * 60 &&
+    server.growTimeSeconds <= 10 * 60 &&
+    server.hackTimeSeconds <= 10 * 60
+  );
+}
+
 function valid_weaken_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getWeakenTime(server.hostname) <= 3 * 60 * 1000 &&
+    not_too_slow(server) &&
     server.minDifficulty !== undefined &&
     server.hackDifficulty !== undefined &&
     server.hackDifficulty > server.minDifficulty
@@ -385,7 +402,7 @@ function valid_grow_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getGrowTime(server.hostname) <= 3 * 60 * 1000 &&
+    not_too_slow(server) &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
     server.moneyMax > 0 &&
@@ -397,7 +414,7 @@ function valid_hack_target(ns: NS, server: Server): boolean {
   return (
     server.hasAdminRights &&
     !server.purchasedByPlayer &&
-    ns.getHackTime(server.hostname) <= 3 * 60 * 1000 &&
+    not_too_slow(server) &&
     ns.hackAnalyzeChance(server.hostname) > 0.5 &&
     server.moneyAvailable !== undefined &&
     server.moneyMax !== undefined &&
