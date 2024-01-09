@@ -12,7 +12,7 @@ export async function main(ns: NS): Promise<void> {
   const nonplayer_only = flags["nonplayer-only"] as boolean;
   const hackable_only = flags["hackable-only"] as boolean;
 
-  for (const [_, server] of get_hosts(ns, 10)) {
+  for (const [_, server] of get_hosts(ns)) {
     if (root_only && !server.hasAdminRights) {
       continue;
     }

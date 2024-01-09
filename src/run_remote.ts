@@ -7,8 +7,6 @@ import {
   logf,
   parse_target_ratios,
   run_targets_on_remotes,
-  sleep_and_spawn_self,
-  tlogf,
 } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
@@ -19,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
   const sleep_seconds = flags["sleep-seconds"] as number;
 
   while (true) {
-    const servers = get_hosts(ns, 10);
+    const servers = get_hosts(ns);
     const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
     const targets = allocate_targets(ns, servers);
     logf(ns, "targets: %j", targets);

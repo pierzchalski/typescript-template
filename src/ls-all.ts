@@ -4,7 +4,7 @@ import { get_hosts, tlogf } from "./utils";
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
 
-  const servers = get_hosts(ns, 10);
+  const servers = get_hosts(ns);
   for (const server of servers.values()) {
     if (server.purchasedByPlayer) {
       continue;

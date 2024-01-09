@@ -1,6 +1,5 @@
 import { NS } from "@ns";
 import {
-  get_host_paths,
   get_hosts,
   kill_any_other_copies,
   sleep_and_spawn_self,
@@ -14,19 +13,8 @@ export async function main(ns: NS): Promise<void> {
   const flags = ns.flags([["sleep-seconds", 60]]);
   const sleep_seconds = flags["sleep-seconds"] as number;
 
-  const paths = get_host_paths(ns, 10);
-  const servers = get_hosts(ns, 10);
+  const servers = get_hosts(ns);
   for (const [host, server] of servers) {
-    if (
-      server.hasAdminRights &&
-      !server.purchasedByPlayer &&
-      server.backdoorInstalled !== undefined &&
-      !server.backdoorInstalled &&
-      server.requiredHackingSkill !== undefined &&
-      ns.getHackingLevel() >= server.requiredHackingSkill
-    ) {
-      tlogf(ns, "Need to install backdoor on %s (%j)", host, paths.get(host));
-    }
     if (
       server.purchasedByPlayer ||
       server.openPortCount === undefined ||
@@ -54,6 +42,18 @@ export async function main(ns: NS): Promise<void> {
       server.openPortCount >= server.numOpenPortsRequired
     ) {
       ns.nuke(host);
+    }
+  }
+  for (const [host, server] of servers) {
+    if (
+      server.hasAdminRights &&
+      !server.purchasedByPlayer &&
+      server.backdoorInstalled !== undefined &&
+      !server.backdoorInstalled &&
+      server.requiredHackingSkill !== undefined &&
+      ns.getHackingLevel() >= server.requiredHackingSkill
+    ) {
+      tlogf(ns, "Need to install backdoor on %s (%j)", host, server.path);
     }
   }
 

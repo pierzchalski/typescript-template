@@ -258,7 +258,7 @@ export function take_random<T>(array: T[]): T | undefined {
   return array.splice(index, 1)[0];
 }
 
-export function get_hosts(ns: NS, depth: number = 1): Map<string, Server> {
+export function get_hosts(ns: NS, depth: number = 50): Map<string, Server> {
   const starting_server = enhance_server(ns, ns.getServer(), [
     ns.getHostname(),
   ]);
@@ -288,7 +288,7 @@ export function get_hosts(ns: NS, depth: number = 1): Map<string, Server> {
 
 export function get_host_paths(
   ns: NS,
-  depth: number = 1
+  depth: number = 50
 ): Map<string, string[]> {
   const hosts = new Map<string, string[]>([[ns.getHostname(), []]]);
   const scanned = new Set<string>();
@@ -581,7 +581,7 @@ export function run_targets_on_remotes(
 }
 
 export function available_funds(ns: NS): number {
-  return Math.max(ns.getServerMoneyAvailable("home") - 5e9, 0);
+  return Math.max(ns.getServerMoneyAvailable("home") - 1e7, 0);
 }
 
 export function clean_nbsp(s: string): string {

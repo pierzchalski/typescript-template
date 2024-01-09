@@ -18,14 +18,17 @@ import {
   subarray_with_maximum_sum,
   compression_ii_lz_decompression,
   find_all_valid_math_expressions,
+  compression_iii_lz_compression,
 } from "./contracts";
+import { contractSolvers } from "./contracts/solvers";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
   const contract_type_counts = new Map<string, number>();
-  for (const [host, _] of get_hosts(ns, 10)) {
+  const results: string[] = [];
+  for (const [host, _] of get_hosts(ns)) {
     for (const file of ns.ls(host, ".cct")) {
       const type = ns.codingcontract.getContractType(file, host);
       if (contract_type_counts.has(type)) {
@@ -55,51 +58,30 @@ export async function main(ns: NS): Promise<void> {
         "attempts remaining: %d",
         ns.codingcontract.getNumTriesRemaining(file, host)
       );
-      var answer: string | number | any[] = 0;
-      if (type === "Total Ways to Sum") {
-        answer = total_ways_to_sum(ns, data);
-      } else if (type === "Sanitize Parentheses in Expression") {
-        answer = await sanitize_parentheses_in_expression(ns, data);
-      } else if (type === "Subarray with Maximum Sum") {
-        answer = subarray_with_maximum_sum(ns, data);
-      } else if (type === "Proper 2-Coloring of a Graph") {
-        answer = proper_2_coloring_of_a_graph(ns, data);
-      } else if (type === "Find Largest Prime Factor") {
-        answer = find_largest_prime_factor(ns, data);
-      } else if (type === "Encryption I: Caesar Cipher") {
-        answer = encryption_i_caesar_cipher(ns, data);
-      } else if (type === "Encryption II: Vigenère Cipher") {
-        answer = encryption_ii_vigenere_cipher(ns, data);
-      } else if (type === "Algorithmic Stock Trader II") {
-        answer = algorithmic_stock_trader_ii(ns, data);
-      } else if (type === "Algorithmic Stock Trader III") {
-        answer = algorithmic_stock_trader_iii(ns, data);
-      } else if (type === "Compression II: LZ Decompression") {
-        answer = compression_ii_lz_decompression(ns, data);
-      } else if (type === "Array Jumping Game") {
-        answer = array_jumping_game(ns, data);
-      } else if (type === "Array Jumping Game II") {
-        answer = array_jumping_game_ii(ns, data);
-      } else if (type === "Unique Paths in a Grid I") {
-        answer = unique_paths_in_a_grid_i(ns, data);
-      } else if (type === "Merge Overlapping Intervals") {
-        answer = merge_overlapping_intervals(ns, data);
-      } else if (type === "Find All Valid Math Expressions") {
-        answer = await find_all_valid_math_expressions(ns, data);
-      } else if (type === "Generate IP Addresses") {
-        answer = generate_ip_addresses(ns, data);
-      } else {
+      var solver: ((_: any) => any) | undefined = undefined;
+      for (const s of contractSolvers) {
+        if (s.name === type) {
+          solver = s.solver;
+          break;
+        }
+      }
+      if (solver === undefined) {
         continue;
       }
+      const answer = solver(data);
       tlogf(ns, "answer: %j", answer);
       const result = ns.codingcontract.attempt(answer, file, host);
       if (result === "") {
         throw new Error("incorrect answer!");
       }
+      results.push(result);
       tlogf(ns, "result: %s", result);
     }
   }
   const counts = Array.from(contract_type_counts.entries());
   counts.sort((a, b) => b[1] - a[1]);
   tlogf(ns, "counts: %j", counts);
+  if (results.length > 0) {
+    tlogf(ns, "results: %j", results);
+  }
 }
