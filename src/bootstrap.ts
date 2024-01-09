@@ -6,4 +6,5 @@ export async function main(ns: NS): Promise<void> {
   ns.run("auto_get_servers.js");
   ns.run("crack_all.js");
   ns.run("stockbot.js");
+  ns.run("attempt_contracts.js");
 }
