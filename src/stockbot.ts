@@ -95,6 +95,10 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
+  if (!ns.stock.hasTIXAPIAccess()) {
+    return;
+  }
+
   trade(ns);
   await ns.stock.nextUpdate();
   ns.spawn(ns.getScriptName(), 1, ...ns.args);

@@ -1,6 +1,6 @@
 import { NS } from "@ns";
 import {
-  get_hosts,
+  get_servers,
   kill_any_other_copies,
   sleep_and_spawn_self,
   tlogf,
@@ -10,11 +10,11 @@ export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
   kill_any_other_copies(ns);
 
-  const flags = ns.flags([["sleep-seconds", 60]]);
+  const flags = ns.flags([["sleep-seconds", 300]]);
   const sleep_seconds = flags["sleep-seconds"] as number;
 
-  const servers = get_hosts(ns);
-  for (const [host, server] of servers) {
+  const servers = get_servers(ns);
+  for (const server of servers) {
     if (
       server.purchasedByPlayer ||
       server.openPortCount === undefined ||
@@ -22,6 +22,7 @@ export async function main(ns: NS): Promise<void> {
     ) {
       continue;
     }
+    const host = server.hostname;
     if (!server.ftpPortOpen && ns.fileExists("FTPCrack.exe")) {
       ns.ftpcrack(host);
     }
@@ -44,7 +45,10 @@ export async function main(ns: NS): Promise<void> {
       ns.nuke(host);
     }
   }
-  for (const [host, server] of servers) {
+  servers.sort((a, b) => {
+    return b.hackTimeSeconds - a.hackTimeSeconds;
+  });
+  for (const server of servers) {
     if (
       server.hasAdminRights &&
       !server.purchasedByPlayer &&
@@ -53,7 +57,13 @@ export async function main(ns: NS): Promise<void> {
       server.requiredHackingSkill !== undefined &&
       ns.getHackingLevel() >= server.requiredHackingSkill
     ) {
-      tlogf(ns, "Need to install backdoor on %s (%j)", host, server.path);
+      tlogf(
+        ns,
+        "Need to install backdoor on %s (%s seconds, %j)",
+        server.hostname,
+        ns.formatNumber(server.hackTimeSeconds),
+        server.path
+      );
     }
   }
 

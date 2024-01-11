@@ -1,4 +1,5 @@
 import { NS, Server as NsServer } from "@ns";
+import { Config } from "./config";
 
 export interface Server extends NsServer {
   path: string[];
@@ -258,60 +259,108 @@ export function take_random<T>(array: T[]): T | undefined {
   return array.splice(index, 1)[0];
 }
 
-export function get_hosts(ns: NS, depth: number = 50): Map<string, Server> {
+export function get_servers(ns: NS, depth: number = 50): Server[] {
   const starting_server = enhance_server(ns, ns.getServer(), [
     ns.getHostname(),
   ]);
-  const paths = get_host_paths(ns, depth);
-  const hosts = new Map<string, Server>([[ns.getHostname(), starting_server]]);
+  const paths = get_server_paths(ns, depth);
+  const servers = new Map<string, Server>([
+    [ns.getHostname(), starting_server],
+  ]);
   const scanned = new Set<string>();
   while (depth > 0) {
-    for (const host of new Set(hosts.keys())) {
+    for (const host of new Set(servers.keys())) {
       if (!scanned.has(host)) {
         scanned.add(host);
         for (const link of ns.scan(host)) {
-          if (hosts.has(link)) {
+          if (servers.has(link)) {
             continue;
           }
           const path = paths.get(link);
           if (path === undefined) {
             throw new Error(`Path for ${link} is undefined.`);
           }
-          hosts.set(link, enhance_server(ns, ns.getServer(link), path));
+          servers.set(link, enhance_server(ns, ns.getServer(link), path));
         }
       }
     }
     depth--;
   }
-  return hosts;
+  return [...servers.values()];
 }
 
-export function get_host_paths(
-  ns: NS,
-  depth: number = 50
-): Map<string, string[]> {
-  const hosts = new Map<string, string[]>([[ns.getHostname(), []]]);
+function get_root_hosts(ns: NS, depth: number): string[] {
+  const root_hosts = new Array<string>();
+  const pending = new Set<string>([ns.getHostname()]);
   const scanned = new Set<string>();
-  while (depth > 0) {
-    for (var [host, path] of new Map(hosts)) {
+  while (pending.size > 0) {
+    for (const host of new Set(pending)) {
+      pending.delete(host);
       if (scanned.has(host)) {
         continue;
       }
       scanned.add(host);
-      if (ns.getServer(host).backdoorInstalled) {
-        path = [host];
-        hosts.set(host, path);
-      }
       for (const link of ns.scan(host)) {
-        if (hosts.has(link)) {
+        if (scanned.has(link)) {
           continue;
         }
-        hosts.set(link, path.concat(link));
+        pending.add(link);
       }
     }
-    depth--;
   }
-  return hosts;
+  for (const host of scanned) {
+    const server = ns.getServer(host);
+    if (server.backdoorInstalled || server.purchasedByPlayer) {
+      root_hosts.push(host);
+    }
+  }
+  return root_hosts;
+}
+
+export function get_server_paths(
+  ns: NS,
+  depth: number = 50
+): Map<string, string[]> {
+  const root_hosts = get_root_hosts(ns, depth);
+  const host_paths = new Map<string, string[]>();
+
+  for (const root_host of root_hosts) {
+    const scanned = new Set<string>();
+    const paths_from_root = new Map<string, string[]>();
+    if (root_host === ns.getHostname()) {
+      paths_from_root.set(root_host, []);
+    } else {
+      paths_from_root.set(root_host, [root_host]);
+    }
+    const pending = new Set<string>([root_host]);
+    while (pending.size > 0) {
+      for (const host of new Set(pending)) {
+        pending.delete(host);
+        if (scanned.has(host)) {
+          continue;
+        }
+        scanned.add(host);
+        const path_from_root = paths_from_root.get(host)!;
+        for (const link of ns.scan(host)) {
+          const current_path = host_paths.get(link);
+          const new_path = path_from_root.concat([link]);
+          paths_from_root.set(link, new_path);
+          if (
+            current_path !== undefined &&
+            current_path.length <= new_path.length
+          ) {
+            continue;
+          }
+          host_paths.set(link, new_path);
+
+          if (!scanned.has(link)) {
+            pending.add(link);
+          }
+        }
+      }
+    }
+  }
+  return host_paths;
 }
 
 /**
@@ -423,20 +472,17 @@ function valid_hack_target(ns: NS, server: Server): boolean {
   );
 }
 
-export function allocate_targets(
-  ns: NS,
-  servers: Map<string, Server>
-): TargetHosts {
+export function allocate_targets(ns: NS, servers: Server[]): TargetHosts {
   const result = default_target_arrays<string>();
-  for (const [host, server] of servers) {
+  for (const server of servers) {
     if (valid_weaken_target(ns, server)) {
-      result.weaken.push(host);
+      result.weaken.push(server.hostname);
     }
     if (valid_grow_target(ns, server)) {
-      result.grow.push(host);
+      result.grow.push(server.hostname);
     }
     if (valid_hack_target(ns, server)) {
-      result.hack.push(host);
+      result.hack.push(server.hostname);
     }
   }
   return result;
@@ -444,14 +490,14 @@ export function allocate_targets(
 
 export function allocate_runners(
   ns: NS,
-  servers: Map<string, Server>,
+  servers: Server[],
   target_ratios: TargetNumbers
 ): TargetHosts {
-  const runner_hosts = new Array<string>();
+  const runners = new Array<Server>();
   var total_memory = 0;
-  for (const [host, server] of servers) {
+  for (const server of servers) {
     if (valid_runner(ns, server)) {
-      runner_hosts.push(host);
+      runners.push(server);
       total_memory += server.maxRam;
     }
   }
@@ -464,23 +510,20 @@ export function allocate_runners(
   const actual_memory_allocations = default_target_kinds(0);
   const result = default_target_arrays<string>();
 
-  runner_hosts.sort((a, b) => {
-    const server_a = servers.get(a) as Server;
-    const server_b = servers.get(b) as Server;
-    return server_b.maxRam - server_a.maxRam;
+  runners.sort((a, b) => {
+    return b.maxRam - a.maxRam;
   });
 
-  for (const host of runner_hosts) {
-    const server = servers.get(host) as Server;
+  for (const runner of runners) {
     const post_allocation_distance = default_target_kinds(0);
     post_allocation_distance.weaken =
-      Math.log(actual_memory_allocations.weaken + server.maxRam) -
+      Math.log(actual_memory_allocations.weaken + runner.maxRam) -
       Math.log(target_memory_allocations.weaken);
     post_allocation_distance.grow =
-      Math.log(actual_memory_allocations.grow + server.maxRam) -
+      Math.log(actual_memory_allocations.grow + runner.maxRam) -
       Math.log(target_memory_allocations.grow);
     post_allocation_distance.hack =
-      Math.log(actual_memory_allocations.hack + server.maxRam) -
+      Math.log(actual_memory_allocations.hack + runner.maxRam) -
       Math.log(target_memory_allocations.hack);
     const min_distance = Math.min(
       post_allocation_distance.weaken,
@@ -488,14 +531,14 @@ export function allocate_runners(
       post_allocation_distance.hack
     );
     if (min_distance === post_allocation_distance.weaken) {
-      actual_memory_allocations.weaken += server.maxRam;
-      result.weaken.push(host);
+      actual_memory_allocations.weaken += runner.maxRam;
+      result.weaken.push(runner.hostname);
     } else if (min_distance === post_allocation_distance.grow) {
-      actual_memory_allocations.grow += server.maxRam;
-      result.grow.push(host);
+      actual_memory_allocations.grow += runner.maxRam;
+      result.grow.push(runner.hostname);
     } else {
-      actual_memory_allocations.hack += server.maxRam;
-      result.hack.push(host);
+      actual_memory_allocations.hack += runner.maxRam;
+      result.hack.push(runner.hostname);
     }
   }
   const allocation_distance = default_target_kinds(0);
@@ -580,8 +623,24 @@ export function run_targets_on_remotes(
   }
 }
 
+export function respawn_self_if_source_changed(
+  ns: NS,
+  old_source: string
+): void {
+  const new_source = ns.read(ns.getScriptName());
+  if (old_source !== new_source) {
+    ns.spawn(ns.getScriptName(), {}, ...ns.args);
+  }
+}
+
 export function available_funds(ns: NS): number {
-  return Math.max(ns.getServerMoneyAvailable("home") - 1e7, 0);
+  const base = ns.getServerMoneyAvailable("home");
+  const config_txt = ns.read("config.txt");
+  if (config_txt === "") {
+    return base;
+  }
+  const config = JSON.parse(config_txt) as Config;
+  return Math.max(base - config.reserve_balance, 0);
 }
 
 export function clean_nbsp(s: string): string {

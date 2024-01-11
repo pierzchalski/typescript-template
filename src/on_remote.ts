@@ -27,11 +27,11 @@ export async function main(ns: NS): Promise<void> {
     }
 
     if (mode === "hack") {
-      await ns.hack(host, { threads });
+      await ns.hack(host);
     } else if (mode === "grow") {
-      await ns.grow(host, { threads });
+      await ns.grow(host);
     } else {
-      await ns.weaken(host, { threads });
+      await ns.weaken(host);
     }
   }
 }

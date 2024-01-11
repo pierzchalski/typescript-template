@@ -2,7 +2,7 @@ import { NS } from "@ns";
 import {
   allocate_runners,
   allocate_targets,
-  get_hosts,
+  get_servers,
   kill_any_other_copies,
   logf,
   parse_target_ratios,
@@ -17,7 +17,7 @@ export async function main(ns: NS): Promise<void> {
   const sleep_seconds = flags["sleep-seconds"] as number;
 
   while (true) {
-    const servers = get_hosts(ns);
+    const servers = get_servers(ns);
     const target_ratios = parse_target_ratios(ns, "target_ratios.txt");
     const targets = allocate_targets(ns, servers);
     logf(ns, "targets: %j", targets);

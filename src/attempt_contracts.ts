@@ -1,7 +1,7 @@
 import { NS } from "@ns";
 import {
   clean_nbsp,
-  get_hosts,
+  get_servers,
   kill_any_other_copies,
   sleep_and_spawn_self,
   tlogf,
@@ -14,7 +14,8 @@ export async function main(ns: NS): Promise<void> {
 
   const contract_type_counts = new Map<string, number>();
   const results: string[] = [];
-  for (const [host, _] of get_hosts(ns)) {
+  for (const server of get_servers(ns)) {
+    const host = server.hostname;
     for (const file of ns.ls(host, ".cct")) {
       const type = ns.codingcontract.getContractType(file, host);
       if (contract_type_counts.has(type)) {

@@ -23,13 +23,18 @@ export async function main(ns: NS): Promise<void> {
     if (target_ram > ns.getPurchasedServerMaxRam()) {
       continue;
     }
-    if (
-      ns.getPurchasedServerUpgradeCost(host, target_ram) > available_funds(ns)
-    ) {
+    const cost = ns.getPurchasedServerUpgradeCost(host, target_ram);
+    if (cost > available_funds(ns)) {
       continue;
     }
     if (ns.upgradePurchasedServer(host, target_ram)) {
-      tlogf(ns, "upgradePurchasedServer(%s, %d)", host, target_ram);
+      tlogf(
+        ns,
+        "upgradePurchasedServer(%s, %d) for %s",
+        host,
+        target_ram,
+        ns.formatNumber(cost)
+      );
     }
   }
 

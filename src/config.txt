@@ -1,0 +1,3 @@
+{
+  "reserve_balance": 1e6
+}

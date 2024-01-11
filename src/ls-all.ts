@@ -1,10 +1,10 @@
 import { NS } from "@ns";
-import { get_hosts, tlogf } from "./utils";
+import { get_servers, tlogf } from "./utils";
 
 export async function main(ns: NS): Promise<void> {
   ns.enableLog("ALL");
 
-  const servers = get_hosts(ns);
+  const servers = get_servers(ns);
   for (const server of servers.values()) {
     if (server.purchasedByPlayer) {
       continue;

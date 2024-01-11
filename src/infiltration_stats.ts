@@ -11,7 +11,7 @@ export async function main(ns: NS): Promise<void> {
     const a_difficulty = a[1].difficulty;
     const b_difficulty = b[1].difficulty;
     if (a_difficulty === b_difficulty) {
-      return a[1].reward.SoARep - b[1].reward.SoARep;
+      return a[1].reward.tradeRep - b[1].reward.tradeRep;
     }
     return a_difficulty - b_difficulty;
   });
